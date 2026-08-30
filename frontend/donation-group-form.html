@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Donation Group Form | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:640px;">
+
+          <div class="page-header">
+            <div class="page-header-left"><h1 id="formTitle" style="font-size:clamp(1.125rem,3vw,1.5rem);">New Donation Group</h1></div>
+          </div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="groupForm" class="card">
+            <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="name">Group Name</label>
+                <input type="text" id="name" name="name" class="form-control" placeholder="e.g. G50, Diamond Members, Platinum Donors" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="description">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="3" placeholder="Describe who belongs in this group..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="minimum_amount">Minimum Donation Amount (&#x20A6;)</label>
+                <input type="number" id="minimum_amount" name="minimum_amount" class="form-control" step="0.01" min="0" placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="maximum_amount">Maximum Donation Amount (&#x20A6;)</label>
+                <input type="number" id="maximum_amount" name="maximum_amount" class="form-control" step="0.01" min="0" placeholder="Leave blank for unlimited">
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;">
+                  <input type="checkbox" id="is_active" name="is_active" class="form-check-input" checked>
+                  Active
+                </label>
+              </div>
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="donation-groups.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = [];
+      if (Array.isArray(errors)) lines.push(...errors);
+      else if (errors && typeof errors === "object") {
+        Object.entries(errors).forEach(([field, msgs]) => (Array.isArray(msgs) ? msgs : [msgs]).forEach((m) => lines.push(`${field}: ${m.message || m}`)));
+      }
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    const id = new URLSearchParams(window.location.search).get("id");
+    const isEdit = !!id;
+
+    document.getElementById("groupForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+
+      const payload = new URLSearchParams({
+        name: document.getElementById("name").value,
+        description: document.getElementById("description").value,
+        minimum_amount: document.getElementById("minimum_amount").value || "0",
+        maximum_amount: document.getElementById("maximum_amount").value,
+        is_active: document.getElementById("is_active").checked ? "on" : "",
+      });
+
+      try {
+        const endpoint = isEdit ? `/settingsapp/api/donation-groups/${id}/update/` : "/settingsapp/api/donation-groups/create/";
+        const data = await window.OYA_API.apiFetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: payload.toString(),
+        });
+        window.location.href = `donation-group-detail.html?id=${data.group.id}`;
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
+        else showErrors([err.message || "Something went wrong."]);
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "donation-groups", title: isEdit ? "Edit Donation Group" : "New Donation Group" });
+      if (!user) return;
+      if (!(user.has_admin_access || user.has_executive_access)) {
+        showErrors(["Admin or Executive access required."]);
+        document.getElementById("groupForm").style.display = "none";
+        return;
+      }
+      if (isEdit) {
+        document.getElementById("formTitle").textContent = "Edit Donation Group";
+        try {
+          const data = await window.OYA_API.apiFetch(`/settingsapp/api/donation-groups/${id}/`);
+          const g = data.group;
+          document.getElementById("name").value = g.name;
+          document.getElementById("description").value = g.description || "";
+          document.getElementById("minimum_amount").value = g.minimum_amount;
+          document.getElementById("maximum_amount").value = g.is_unlimited ? "" : g.maximum_amount;
+          document.getElementById("is_active").checked = g.is_active;
+        } catch (err) {
+          showErrors([err.message || "Couldn't load the group."]);
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

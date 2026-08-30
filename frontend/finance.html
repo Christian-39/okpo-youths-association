@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Finance | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h1 style="font-size:clamp(1.125rem, 3vw, 1.5rem);">Finance Overview</h1>
+              <p style="font-size:clamp(0.75rem, 2vw, 0.875rem);">Treasury summary at a glance</p>
+            </div>
+          </div>
+
+          <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;" id="kpiRow">
+            <div class="kpi-card"><div class="kpi-value" id="kpiTreasury">—</div><div class="kpi-label">Treasury Balance</div></div>
+            <div class="kpi-card accent-success"><div class="kpi-value" style="color:var(--oya-success);" id="kpiIncome">—</div><div class="kpi-label">Total Income</div></div>
+            <div class="kpi-card accent-danger"><div class="kpi-value" style="color:var(--oya-danger);" id="kpiExpenses">—</div><div class="kpi-label">Total Expenses</div></div>
+            <div class="kpi-card accent-warning"><div class="kpi-value" style="color:var(--oya-warning);" id="kpiMonth">—</div><div class="kpi-label">Expenses This Month</div></div>
+          </div>
+
+          <div class="dashboard-grid dashboard-grid-2">
+            <a href="dues.html" class="card" style="text-decoration:none;color:inherit;display:block;">
+              <div class="card-body" style="display:flex;align-items:center;gap:1rem;">
+                <div class="kpi-icon" style="background:var(--oya-warning-bg);color:var(--oya-warning);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                <div>
+                  <div class="card-header-title">Dues Tracker</div>
+                  <div class="card-header-subtitle">Member dues status, prepaid dues, and debtors</div>
+                </div>
+              </div>
+            </a>
+            <a href="contributions.html" class="card" style="text-decoration:none;color:inherit;display:block;">
+              <div class="card-body" style="display:flex;align-items:center;gap:1rem;">
+                <div class="kpi-icon" style="background:var(--oya-success-bg);color:var(--oya-success);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                <div>
+                  <div class="card-header-title">Contributions &amp; Donations</div>
+                  <div class="card-header-subtitle">View and record non-dues income</div>
+                </div>
+              </div>
+            </a>
+            <a href="expenses.html" class="card" style="text-decoration:none;color:inherit;display:block;">
+              <div class="card-body" style="display:flex;align-items:center;gap:1rem;">
+                <div class="kpi-icon" style="background:var(--oya-danger-bg);color:var(--oya-danger);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
+                <div>
+                  <div class="card-header-title">Expenses</div>
+                  <div class="card-header-subtitle">View and record association expenditures</div>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="alert" style="margin-top:1.5rem;background:var(--oya-warning-bg);color:var(--oya-warning);">
+            The full finance summary (income/expense trend charts, per-clan dues collection) from the original
+            <code>finance_summary</code> page isn't ported yet — this is a simplified overview. See the migration report.
+          </div>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "finance", title: "Finance" });
+      if (!user) return;
+      try {
+        const data = await window.OYA_API.apiFetch("/finance/api/expenses/?page=1");
+        document.getElementById("kpiTreasury").textContent = naira(data.treasury_balance);
+        document.getElementById("kpiIncome").textContent = naira(data.total_income);
+        document.getElementById("kpiExpenses").textContent = naira(data.total_expenses);
+        document.getElementById("kpiMonth").textContent = naira(data.this_month_expenses);
+      } catch (_) { /* kpis stay blank on failure */ }
+    })();
+  </script>
+</body>
+</html>

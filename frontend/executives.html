@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Executives | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h1 style="font-size:clamp(1.125rem, 3vw, 1.5rem);">Executive Directory</h1>
+              <p style="font-size:clamp(0.75rem, 2vw, 0.875rem);">Current OYA executives, committee heads, and their roles</p>
+            </div>
+            <div class="page-header-actions" style="flex-wrap:wrap;gap:0.5rem;">
+              <button class="btn btn-secondary" id="exportBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export
+              </button>
+              <a href="executive-form.html" class="btn btn-primary" id="addBtn" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Executive
+              </a>
+            </div>
+          </div>
+
+          <div class="filters-bar" style="flex-wrap:wrap;gap:0.5rem;">
+            <div class="filter-group">
+              <span class="filter-label" style="font-size:clamp(0.75rem, 1.5vw, 0.8125rem);">Filter:</span>
+              <select id="statusFilter" class="form-control" style="width:160px;">
+                <option value="">All Executives</option>
+                <option value="current">Current Only</option>
+                <option value="past">Past Only</option>
+              </select>
+            </div>
+            <div style="margin-left:auto;font-size:clamp(0.75rem, 2vw, 0.875rem);color:var(--oya-text-secondary);white-space:nowrap;" id="statsSummary"></div>
+          </div>
+
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="toolbar-search" style="max-width:100%;">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="searchInput" placeholder="Search executives...">
+              </div>
+            </div>
+            <div class="table-container" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+              <table class="data-table" id="executivesTable" style="white-space:nowrap;">
+                <thead>
+                  <tr>
+                    <th style="width:50px;"></th>
+                    <th>Name</th><th>Position</th><th>Phone</th><th>Tenure</th><th>Status</th>
+                    <th style="width:120px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">Loading&hellip;</td></tr></tbody>
+              </table>
+            </div>
+            <div class="card-footer" id="paginationFooter" style="display:none;">
+              <span style="font-size:0.8125rem;color:var(--oya-text-muted);" id="paginationSummary"></span>
+              <div class="pagination" id="paginationControls"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    const AVATAR_COLORS = ["var(--oya-primary)", "var(--oya-accent)", "var(--oya-success)", "var(--oya-warning)"];
+    const state = { search: "", status: "", page: 1 };
+    let isSuperuser = false;
+
+    function postBadge(post) {
+      let cls = "badge-info";
+      if (post === "President") cls = "badge-accent";
+      else if (post === "Vice President" || post === "Deputy President") cls = "badge-primary";
+      else if (post === "Treasurer" || post === "Financial Secretary") cls = "badge-success";
+      else if (post === "Secretary" || post === "Assistant Secretary") cls = "badge-warning";
+      return `<span class="badge ${cls}" style="white-space:nowrap;">${esc(post)}</span>`;
+    }
+
+    function renderRow(e, idx) {
+      const m = e.member;
+      const avatarBg = m.photo_url ? "" : `background:${AVATAR_COLORS[idx % AVATAR_COLORS.length]};color:#fff;`;
+      const avatarInner = m.photo_url
+        ? `<img src="${m.photo_url}" alt="${esc(m.full_name)}" style="width:100%;height:100%;object-fit:cover;">`
+        : esc((m.full_name || "").slice(0, 2).toUpperCase());
+      const startYear = e.start_date ? e.start_date.slice(0, 4) : "";
+      const tenure = `${startYear}${e.end_date ? " - " + e.end_date.slice(0, 4) : " - Present"}`;
+
+      return `<tr>
+        <td><div class="avatar avatar-sm" style="${avatarBg}overflow:hidden;">${avatarInner}</div></td>
+        <td><span class="cell-name" style="white-space:nowrap;">${esc(m.full_name)}</span></td>
+        <td>${postBadge(e.post)}</td>
+        <td class="cell-muted">${esc(m.phone || "N/A")}</td>
+        <td class="cell-muted">${tenure}</td>
+        <td>${e.is_current ? `<span class="badge badge-success">Active</span>` : `<span class="badge badge-secondary">Past</span>`}</td>
+        <td>
+          <div class="table-actions" style="flex-wrap:nowrap;gap:0.25rem;">
+            <a href="executive-detail.html?id=${e.id}" class="table-action-btn" title="View Details">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </a>
+            ${isSuperuser ? `
+            <a href="executive-form.html?id=${e.id}" class="table-action-btn" title="Edit">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </a>
+            ${e.is_current ? `<button type="button" class="table-action-btn danger" title="End Tenure" data-end-tenure="${e.id}" data-name="${esc(m.full_name)}" data-post="${esc(e.post)}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </button>` : ""}` : ""}
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    function renderPagination(p) {
+      const footer = document.getElementById("paginationFooter");
+      if (p.num_pages <= 1) { footer.style.display = "none"; return; }
+      footer.style.display = "";
+      document.getElementById("paginationSummary").textContent = `Showing ${p.start_index}-${p.end_index} of ${p.count}`;
+      const controls = document.getElementById("paginationControls");
+      let html = "";
+      for (let n = 1; n <= p.num_pages; n++) {
+        html += n === p.page ? `<button class="page-btn active">${n}</button>` : `<a href="#" class="page-btn" data-page="${n}">${n}</a>`;
+      }
+      controls.innerHTML = html;
+      controls.querySelectorAll("[data-page]").forEach((el) => el.addEventListener("click", (e) => { e.preventDefault(); state.page = parseInt(el.dataset.page, 10); load(); }));
+    }
+
+    async function load() {
+      const qs = new URLSearchParams();
+      if (state.search) qs.set("search", state.search);
+      if (state.status) qs.set("status", state.status);
+      qs.set("page", state.page);
+      const tbody = document.getElementById("tbody");
+      try {
+        const data = await window.OYA_API.apiFetch(`/executives/api/list/?${qs.toString()}`);
+        document.getElementById("statsSummary").innerHTML = `<strong style="color:var(--oya-text-primary);">${data.total_executives}</strong> executives &middot; <strong style="color:var(--oya-text-primary);">${data.current_count}</strong> current`;
+        tbody.innerHTML = data.executives.length ? data.executives.map(renderRow).join("") : `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No executives found.</td></tr>`;
+        renderPagination(data.pagination);
+        wireEndTenureButtons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-danger);">Couldn't load: ${esc(err.message)}</td></tr>`;
+      }
+    }
+
+    function wireEndTenureButtons() {
+      document.querySelectorAll("[data-end-tenure]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!confirm(`End tenure for ${btn.dataset.name} as ${btn.dataset.post}?`)) return;
+          try {
+            await window.OYA_API.apiFetch(`/executives/api/${btn.dataset.endTenure}/end-tenure/`, { method: "POST" });
+            load();
+          } catch (err) {
+            alert(`Couldn't end tenure: ${err.message}`);
+          }
+        });
+      });
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "executives", title: "Executives" });
+      if (!user) return;
+      isSuperuser = !!user.is_superuser;
+      if (isSuperuser) document.getElementById("addBtn").style.display = "";
+
+      let debounce;
+      document.getElementById("searchInput").addEventListener("input", (e) => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => { state.search = e.target.value.trim(); state.page = 1; load(); }, 350);
+      });
+      document.getElementById("statusFilter").addEventListener("change", (e) => { state.status = e.target.value; state.page = 1; load(); });
+      document.getElementById("exportBtn").addEventListener("click", () => {
+        const rows = [...document.querySelectorAll("#executivesTable tbody tr")].map((tr) =>
+          [...tr.querySelectorAll("td")].slice(1, -1).map((td) => `"${td.textContent.trim().replace(/"/g, '""')}"`).join(",")
+        );
+        const csv = ["Name,Position,Phone,Tenure,Status", ...rows].join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob); a.download = "executives.csv"; a.click();
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>

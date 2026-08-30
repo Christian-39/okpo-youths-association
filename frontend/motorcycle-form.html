@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Motorcycle Form | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:600px;">
+
+          <div class="page-header"><div class="page-header-left"><h1 id="formTitle" style="font-size:clamp(1.125rem,3vw,1.5rem);">Register Motorcycle</h1></div></div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="mcForm" class="card">
+            <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="asset_tag">Asset Tag</label>
+                <input type="text" id="asset_tag" name="asset_tag" class="form-control" placeholder="e.g. OYA-MC-001" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="brand">Brand</label>
+                <input type="text" id="brand" name="brand" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="model">Model</label>
+                <input type="text" id="model" name="model" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="year">Year</label>
+                <input type="number" id="year" name="year" class="form-control" min="1990" max="2100">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="condition">Condition</label>
+                <select id="condition" name="condition" class="form-select"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="assigned_to">Assigned To</label>
+                <select id="assigned_to" name="assigned_to" class="form-select"><option value="">Unassigned</option></select>
+              </div>
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="motorcycles.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = [];
+      if (Array.isArray(errors)) lines.push(...errors);
+      else if (errors && typeof errors === "object") Object.entries(errors).forEach(([f, m]) => (Array.isArray(m) ? m : [m]).forEach((x) => lines.push(`${f}: ${x.message || x}`)));
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+    const id = new URLSearchParams(window.location.search).get("id");
+    const isEdit = !!id;
+
+    document.getElementById("mcForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+      const payload = new URLSearchParams({
+        asset_tag: document.getElementById("asset_tag").value,
+        brand: document.getElementById("brand").value,
+        model: document.getElementById("model").value,
+        year: document.getElementById("year").value,
+        condition: document.getElementById("condition").value,
+        assigned_to: document.getElementById("assigned_to").value,
+      });
+      try {
+        const endpoint = isEdit ? `/operations/api/motorcycles/${id}/update/` : "/operations/api/motorcycles/create/";
+        await window.OYA_API.apiFetch(endpoint, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: payload.toString() });
+        window.location.href = "motorcycles.html";
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
+        else showErrors([err.message || "Something went wrong."]);
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "motorcycles", title: isEdit ? "Edit Motorcycle" : "Register Motorcycle", requireExecutive: true });
+      if (!user) return;
+      try {
+        const meta = await window.OYA_API.apiFetch("/operations/api/motorcycles/form-meta/");
+        const condSel = document.getElementById("condition");
+        meta.condition_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; condSel.appendChild(o); });
+        const memberSel = document.getElementById("assigned_to");
+        meta.members.forEach((m) => { const o = document.createElement("option"); o.value = m.id; o.textContent = m.full_name; memberSel.appendChild(o); });
+
+        if (isEdit) {
+          document.getElementById("formTitle").textContent = "Edit Motorcycle";
+          const { motorcycle } = await window.OYA_API.apiFetch(`/operations/api/motorcycles/${id}/`);
+          document.getElementById("asset_tag").value = motorcycle.asset_tag;
+          document.getElementById("brand").value = motorcycle.brand || "";
+          document.getElementById("model").value = motorcycle.model || "";
+          document.getElementById("year").value = motorcycle.year || "";
+          condSel.value = motorcycle.condition;
+          if (motorcycle.assigned_to) memberSel.value = motorcycle.assigned_to.id;
+        }
+      } catch (err) {
+        showErrors([err.message || "Couldn't load the form."]);
+      }
+    })();
+  </script>
+</body>
+</html>

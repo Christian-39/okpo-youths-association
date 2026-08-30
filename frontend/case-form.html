@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Case Form | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:640px;">
+
+          <div class="page-header"><div class="page-header-left"><h1 id="formTitle" style="font-size:clamp(1.125rem,3vw,1.5rem);">File Case</h1></div></div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="caseForm" class="card">
+            <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="title">Case Title</label>
+                <input type="text" id="title" name="title" class="form-control" placeholder="Case title" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="description">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="6" placeholder="Detailed description of the case..." required></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="fine_amount">Fine Amount (&#x20A6;)</label>
+                <input type="number" id="fine_amount" name="fine_amount" class="form-control" step="0.01" min="0" placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="respondent">Respondent</label>
+                <select id="respondent" name="respondent" class="form-select" required><option value="">Select a member</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="reported_to">Reported To (Task Force)</label>
+                <select id="reported_to" name="reported_to" class="form-select"><option value="">--------- Select Task Force Member ---------</option></select>
+              </div>
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="cases.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = [];
+      if (Array.isArray(errors)) lines.push(...errors);
+      else if (errors && typeof errors === "object") Object.entries(errors).forEach(([f, m]) => (Array.isArray(m) ? m : [m]).forEach((x) => lines.push(`${f}: ${x.message || x}`)));
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+    const id = new URLSearchParams(window.location.search).get("id");
+    const isEdit = !!id;
+
+    document.getElementById("caseForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+      const payload = new URLSearchParams({
+        title: document.getElementById("title").value,
+        description: document.getElementById("description").value,
+        fine_amount: document.getElementById("fine_amount").value || "0",
+        status: document.getElementById("status").value,
+        respondent: document.getElementById("respondent").value,
+        reported_to: document.getElementById("reported_to").value,
+      });
+      try {
+        const endpoint = isEdit ? `/operations/api/cases/${id}/update/` : "/operations/api/cases/create/";
+        const data = await window.OYA_API.apiFetch(endpoint, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: payload.toString() });
+        window.location.href = `case-detail.html?id=${data.case.id}`;
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
+        else showErrors([err.message || "Something went wrong."]);
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "cases", title: isEdit ? "Edit Case" : "File Case", requireExecutive: true });
+      if (!user) return;
+
+      const statusChoices = [["OPEN", "Open"], ["IN_PROGRESS", "In Progress"], ["RESOLVED", "Resolved"]];
+      const statusSel = document.getElementById("status");
+      statusChoices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; statusSel.appendChild(o); });
+
+      try {
+        const metaEndpoint = isEdit ? `/operations/api/cases/${id}/form-meta/` : "/operations/api/cases/form-meta/";
+        const meta = await window.OYA_API.apiFetch(metaEndpoint);
+        const respSel = document.getElementById("respondent");
+        meta.respondents.forEach((m) => { const o = document.createElement("option"); o.value = m.id; o.textContent = m.full_name; respSel.appendChild(o); });
+        const reportedSel = document.getElementById("reported_to");
+        meta.task_force_members.forEach((t) => { const o = document.createElement("option"); o.value = t.id; o.textContent = t.name; reportedSel.appendChild(o); });
+
+        if (isEdit) {
+          document.getElementById("formTitle").textContent = "Edit Case";
+          const { case: c } = await window.OYA_API.apiFetch(`/operations/api/cases/${id}/`);
+          document.getElementById("title").value = c.title;
+          document.getElementById("description").value = c.description || "";
+          document.getElementById("fine_amount").value = c.fine_amount;
+          statusSel.value = c.status;
+          if (c.respondent) respSel.value = c.respondent.id;
+          if (c.reported_to) reportedSel.value = c.reported_to.id;
+        }
+      } catch (err) {
+        showErrors([err.message || "Couldn't load the form."]);
+      }
+    })();
+  </script>
+</body>
+</html>

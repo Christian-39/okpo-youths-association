@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Outside Donor Form | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:640px;">
+
+          <div class="page-header"><div class="page-header-left"><h1 id="formTitle" style="font-size:clamp(1.125rem,3vw,1.5rem);">Add Outside Donor</h1></div></div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="donorForm" class="card">
+            <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="full_name">Full Name</label>
+                <input type="text" id="full_name" name="full_name" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="profile_picture">Profile Picture</label>
+                <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*">
+                <img id="photoPreview" style="display:none;margin-top:0.5rem;max-width:100px;max-height:100px;border-radius:50%;object-fit:cover;">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="phone_number">Phone Number</label>
+                <input type="text" id="phone_number" name="phone_number" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="address">Address</label>
+                <textarea id="address" name="address" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="gender">Gender</label>
+                <select id="gender" name="gender" class="form-select">
+                  <option value="">-- Select --</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="occupation">Occupation</label>
+                <input type="text" id="occupation" name="occupation" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="invited_by">Invited By</label>
+                <select id="invited_by" name="invited_by" class="form-select" required><option value="">Search member who invited this donor…</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="notes">Notes</label>
+                <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Additional notes..."></textarea>
+              </div>
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="outside-donors.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = [];
+      if (Array.isArray(errors)) lines.push(...errors);
+      else if (errors && typeof errors === "object") Object.entries(errors).forEach(([f, m]) => (Array.isArray(m) ? m : [m]).forEach((x) => lines.push(`${f}: ${x.message || x}`)));
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+    const id = new URLSearchParams(window.location.search).get("id");
+    const isEdit = !!id;
+
+    document.getElementById("profile_picture").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = document.getElementById("photoPreview");
+      img.src = URL.createObjectURL(file); img.style.display = "";
+    });
+
+    document.getElementById("donorForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+      const formData = new FormData(document.getElementById("donorForm"));
+      try {
+        const endpoint = isEdit ? `/project_donations/api/outside-donors/${id}/update/` : "/project_donations/api/outside-donors/create/";
+        const data = await window.OYA_API.apiFetch(endpoint, { method: "POST", body: formData });
+        window.location.href = `outside-donor-detail.html?id=${data.donor.id}`;
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
+        else showErrors([err.message || "Something went wrong."]);
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "outside-donors", title: isEdit ? "Edit Outside Donor" : "Add Outside Donor", requireExecutive: true });
+      if (!user) return;
+      try {
+        const meta = await window.OYA_API.apiFetch("/project_donations/api/outside-donors/form-meta/");
+        const sel = document.getElementById("invited_by");
+        meta.members.forEach((m) => { const o = document.createElement("option"); o.value = m.id; o.textContent = `${m.full_name} (${m.serial_number})`; sel.appendChild(o); });
+
+        if (isEdit) {
+          document.getElementById("formTitle").textContent = "Edit Outside Donor";
+          const { donor } = await window.OYA_API.apiFetch(`/project_donations/api/outside-donors/${id}/`);
+          document.getElementById("full_name").value = donor.full_name;
+          document.getElementById("phone_number").value = donor.phone_number || "";
+          document.getElementById("address").value = donor.address || "";
+          document.getElementById("gender").value = donor.gender || "";
+          document.getElementById("occupation").value = donor.occupation || "";
+          document.getElementById("notes").value = donor.notes || "";
+          if (donor.invited_by) sel.value = donor.invited_by.id;
+          if (donor.profile_picture_url) { document.getElementById("photoPreview").src = donor.profile_picture_url; document.getElementById("photoPreview").style.display = ""; }
+        }
+      } catch (err) {
+        showErrors([err.message || "Couldn't load the form."]);
+      }
+    })();
+  </script>
+</body>
+</html>

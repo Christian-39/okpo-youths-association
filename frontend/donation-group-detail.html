@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Donation Group | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+          <div id="loadingState" style="text-align:center;padding:3rem;color:var(--oya-text-muted);">Loading&hellip;</div>
+          <div id="detailContent" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+    const id = new URLSearchParams(window.location.search).get("id");
+    let canManage = false;
+
+    function render(data) {
+      const g = data.group, r = data.report;
+      return `
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1 style="font-size:clamp(1.125rem,3vw,1.5rem);">${esc(g.name)}</h1>
+          <p style="font-size:0.875rem;color:var(--oya-text-muted);">${esc(g.description || "No description")} &middot; Range: ${naira(g.minimum_amount)} \u2013 ${g.is_unlimited ? "Unlimited" : naira(g.maximum_amount)}</p>
+        </div>
+        <div class="page-header-actions">
+          ${data.can_manage ? `<a href="donation-group-form.html?id=${g.id}" class="btn btn-secondary">Edit Group</a>` : ""}
+        </div>
+      </div>
+
+      <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+        <div class="kpi-card"><div class="kpi-value">${r.total_members}</div><div class="kpi-label">Members</div></div>
+        <div class="kpi-card accent-success"><div class="kpi-value" style="color:var(--oya-success);">${naira(r.total_money_donated)}</div><div class="kpi-label">Total Money Donated</div></div>
+        <div class="kpi-card accent-info"><div class="kpi-value" style="color:var(--oya-info);">${r.total_projects_participated}</div><div class="kpi-label">Projects Participated</div></div>
+        <div class="kpi-card accent-warning"><div class="kpi-value" style="color:var(--oya-warning);">${naira(r.total_outstanding_pledges)}</div><div class="kpi-label">Outstanding Pledges</div></div>
+      </div>
+
+      ${data.can_manage ? `
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header"><div class="card-header-title">Add Member</div></div>
+        <div class="card-body" style="position:relative;">
+          <input type="text" id="addMemberSearch" class="form-control" placeholder="Search member by name, no. or phone…" autocomplete="off">
+          <div id="addMemberResults" class="dropdown-menu" style="position:absolute;left:1.25rem;right:1.25rem;top:100%;z-index:20;display:none;max-height:220px;overflow-y:auto;"></div>
+        </div>
+      </div>` : ""}
+
+      <div class="card">
+        <div class="card-header"><div class="card-header-title">Members (${g.members_count != null ? g.members_count : r.total_members})</div></div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Serial</th><th>Clan</th><th>Date Added</th>${data.can_manage ? "<th></th>" : ""}</tr></thead>
+            <tbody>
+              ${data.memberships.length ? data.memberships.map((m) => `
+              <tr>
+                <td>${esc(m.member_name)}</td>
+                <td class="cell-muted">${esc(m.member_serial)}</td>
+                <td>${esc(m.clan || "—")}</td>
+                <td class="cell-muted">${esc((m.date_added || "").slice(0, 10))}</td>
+                ${data.can_manage ? `<td><button class="table-action-btn danger" data-remove="${m.id}" title="Remove"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></td>` : ""}
+              </tr>`).join("") : `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No members yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    }
+
+    async function reload() {
+      const data = await window.OYA_API.apiFetch(`/settingsapp/api/donation-groups/${id}/`);
+      document.getElementById("detailContent").innerHTML = render(data);
+      if (data.can_manage) wireAddMember();
+      document.querySelectorAll("[data-remove]").forEach((btn) => btn.addEventListener("click", async () => {
+        if (!confirm("Remove this member from the group?")) return;
+        try {
+          await window.OYA_API.apiFetch(`/settingsapp/api/donation-groups/${id}/members/${btn.dataset.remove}/remove/`, { method: "DELETE" });
+          reload();
+        } catch (err) { alert(`Couldn't remove: ${err.message}`); }
+      }));
+    }
+
+    function wireAddMember() {
+      const input = document.getElementById("addMemberSearch");
+      const box = document.getElementById("addMemberResults");
+      if (!input) return;
+      let debounce;
+      input.addEventListener("input", () => {
+        clearTimeout(debounce);
+        const q = input.value.trim();
+        if (q.length < 1) { box.style.display = "none"; return; }
+        debounce = setTimeout(async () => {
+          const data = await window.OYA_API.apiFetch(`/accounts/api/users/search/?q=${encodeURIComponent(q)}`);
+          const results = data.results || [];
+          box.innerHTML = results.length
+            ? results.map((r) => `<button type="button" class="dropdown-item" data-id="${r.id}" style="width:100%;text-align:left;">${esc(r.text || r.full_name)}</button>`).join("")
+            : `<div class="dropdown-item">No matches</div>`;
+          box.style.display = "";
+          box.querySelectorAll("[data-id]").forEach((btn) => btn.addEventListener("click", async () => {
+            try {
+              await window.OYA_API.apiFetch(`/settingsapp/api/donation-groups/${id}/members/add/`, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `member=${encodeURIComponent(btn.dataset.id)}`,
+              });
+              input.value = ""; box.style.display = "none";
+              reload();
+            } catch (err) {
+              alert((err.data && err.data.errors && JSON.stringify(err.data.errors)) || err.message);
+            }
+          }));
+        }, 300);
+      });
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "donation-groups", title: "Donation Group" });
+      if (!user) return;
+      if (!id) { document.getElementById("loadingState").innerHTML = `<div class="alert alert-danger">No group specified.</div>`; return; }
+      try {
+        await reload();
+        document.getElementById("loadingState").style.display = "none";
+        document.getElementById("detailContent").style.display = "";
+      } catch (err) {
+        document.getElementById("loadingState").innerHTML = `<div class="alert alert-danger">Couldn't load: ${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

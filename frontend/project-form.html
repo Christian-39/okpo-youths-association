@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Project Form | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:700px;">
+
+          <div class="page-header">
+            <div class="page-header-left"><h1 id="formTitle" style="font-size:clamp(1.125rem,3vw,1.5rem);">Create Project</h1></div>
+          </div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="projectForm" class="card">
+            <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="title">Project Title</label>
+                <input type="text" id="title" name="title" class="form-control" placeholder="Project title" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="budget">Budget (&#x20A6;)</label>
+                <input type="number" id="budget" name="budget" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="description">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="6" placeholder="Project description..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="progress_percentage">Progress Percentage</label>
+                <input type="number" id="progress_percentage" name="progress_percentage" class="form-control" min="0" max="100" placeholder="0-100" value="0">
+              </div>
+
+              <hr style="border-color:var(--oya-border);">
+
+              <div class="form-group">
+                <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;">
+                  <input type="checkbox" id="enable_fundraising" name="enable_fundraising" class="form-check-input">
+                  Enable Fundraising
+                </label>
+                <span class="form-help" style="font-size:0.8125rem;color:var(--oya-text-muted);">Allow donations to be raised for this project.</span>
+              </div>
+
+              <div id="fundraisingFields" style="display:none;flex-direction:column;gap:1.25rem;">
+                <div class="form-group">
+                  <label class="form-label" for="target_amount">Target Amount (&#x20A6;)</label>
+                  <input type="number" id="target_amount" name="target_amount" class="form-control" step="0.01" min="0" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="fundraising_start_date">Fundraising Start Date</label>
+                  <input type="date" id="fundraising_start_date" name="fundraising_start_date" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="fundraising_end_date">Fundraising End Date</label>
+                  <input type="date" id="fundraising_end_date" name="fundraising_end_date" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="fundraising_status">Fundraising Status</label>
+                  <select id="fundraising_status" name="fundraising_status" class="form-select"></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;">
+                    <input type="checkbox" id="include_in_group_reports" name="include_in_group_reports" class="form-check-input" checked>
+                    Include in Donation Group Reports
+                  </label>
+                  <span class="form-help" style="font-size:0.8125rem;color:var(--oya-text-muted);">If disabled, this project's donations are excluded from donation group reports only.</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="projects.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = [];
+      if (Array.isArray(errors)) lines.push(...errors);
+      else if (errors && typeof errors === "object") {
+        Object.entries(errors).forEach(([field, msgs]) => (Array.isArray(msgs) ? msgs : [msgs]).forEach((m) => lines.push(`${field}: ${m.message || m}`)));
+      }
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    const id = new URLSearchParams(window.location.search).get("id");
+    const isEdit = !!id;
+
+    function toggleFundraisingFields() {
+      document.getElementById("fundraisingFields").style.display = document.getElementById("enable_fundraising").checked ? "flex" : "none";
+    }
+    document.getElementById("enable_fundraising").addEventListener("change", toggleFundraisingFields);
+
+    document.getElementById("projectForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+
+      const payload = new URLSearchParams({
+        title: document.getElementById("title").value,
+        budget: document.getElementById("budget").value,
+        description: document.getElementById("description").value,
+        status: document.getElementById("status").value,
+        progress_percentage: document.getElementById("progress_percentage").value || "0",
+        enable_fundraising: document.getElementById("enable_fundraising").checked ? "on" : "",
+        target_amount: document.getElementById("target_amount").value || "0",
+        fundraising_start_date: document.getElementById("fundraising_start_date").value,
+        fundraising_end_date: document.getElementById("fundraising_end_date").value,
+        fundraising_status: document.getElementById("fundraising_status").value,
+        include_in_group_reports: document.getElementById("include_in_group_reports").checked ? "on" : "",
+      });
+
+      try {
+        const endpoint = isEdit ? `/projects/api/${id}/update/` : "/projects/api/create/";
+        const data = await window.OYA_API.apiFetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: payload.toString(),
+        });
+        window.location.href = `project-detail.html?id=${data.project.id}`;
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
+        else showErrors([err.message || "Something went wrong."]);
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "projects", title: isEdit ? "Edit Project" : "Create Project", requireExecutive: true });
+      if (!user) return;
+
+      const statusChoices = [["FUTURE", "Future"], ["AT_HAND", "At Hand"], ["FINISHED", "Finished"]];
+      const statusSelect = document.getElementById("status");
+      statusChoices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; statusSelect.appendChild(o); });
+
+      const fundraisingStatusChoices = [["UPCOMING", "Upcoming"], ["ACTIVE", "Active"], ["CLOSED", "Closed"]];
+      const fsSelect = document.getElementById("fundraising_status");
+      fundraisingStatusChoices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; fsSelect.appendChild(o); });
+
+      if (isEdit) {
+        document.getElementById("formTitle").textContent = "Update Project";
+        try {
+          const data = await window.OYA_API.apiFetch(`/projects/api/${id}/`);
+          const p = data.project;
+          document.getElementById("title").value = p.title;
+          document.getElementById("budget").value = p.budget;
+          document.getElementById("description").value = p.description || "";
+          statusSelect.value = p.status;
+          document.getElementById("progress_percentage").value = p.progress_percentage;
+          document.getElementById("enable_fundraising").checked = p.enable_fundraising;
+          document.getElementById("target_amount").value = p.target_amount;
+          document.getElementById("fundraising_start_date").value = p.fundraising_start_date || "";
+          document.getElementById("fundraising_end_date").value = p.fundraising_end_date || "";
+          fsSelect.value = p.fundraising_status;
+          document.getElementById("include_in_group_reports").checked = p.include_in_group_reports;
+          toggleFundraisingFields();
+        } catch (err) {
+          showErrors([err.message || "Couldn't load the project."]);
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

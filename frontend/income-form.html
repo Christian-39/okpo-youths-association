@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Record Contribution | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:640px;">
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h1 style="font-size:clamp(1.125rem, 3vw, 1.5rem);">Record Contribution</h1>
+              <p style="font-size:clamp(0.75rem, 2vw, 0.875rem);">Treasury balance: <strong id="treasuryBalance">—</strong></p>
+            </div>
+          </div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="incomeForm" class="card" novalidate>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+
+              <div class="form-group">
+                <label class="form-label" for="income_type">Income Type</label>
+                <select id="income_type" name="income_type" class="form-select"></select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="amount">Amount (&#x20A6;)</label>
+                <input type="number" id="amount" name="amount" class="form-control" step="0.01" min="0.01" placeholder="0.00" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reason">Reason</label>
+                <input type="text" id="reason" name="reason" class="form-control" placeholder="e.g., Donation for project, Event ticket sales" required>
+              </div>
+
+              <div class="form-group" style="position:relative;">
+                <label class="form-label" for="memberSearch">Member (optional)</label>
+                <input type="text" id="memberSearch" class="form-control" placeholder="Search member by name, no. or phone (optional)…" autocomplete="off">
+                <input type="hidden" id="member" name="member">
+                <div id="memberResults" class="dropdown-menu" style="position:absolute;top:100%;left:0;right:0;z-index:20;display:none;max-height:220px;overflow-y:auto;"></div>
+                <div id="memberSelected" style="display:none;margin-top:0.5rem;font-size:0.875rem;">
+                  Selected: <strong id="memberSelectedName"></strong>
+                  <button type="button" id="memberClear" class="btn btn-sm btn-ghost" style="margin-left:0.5rem;">Clear</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="paid_by">Paid By (if not a member)</label>
+                <input type="text" id="paid_by" name="paid_by" class="form-control" placeholder="Name of payer / contributor (if not a member)">
+              </div>
+
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="contributions.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = [];
+      if (Array.isArray(errors)) lines.push(...errors);
+      else if (errors && typeof errors === "object") {
+        Object.entries(errors).forEach(([field, msgs]) => (Array.isArray(msgs) ? msgs : [msgs]).forEach((m) => lines.push(`${field}: ${m.message || m}`)));
+      }
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    let searchDebounce;
+    document.getElementById("memberSearch").addEventListener("input", (e) => {
+      clearTimeout(searchDebounce);
+      const q = e.target.value.trim();
+      const box = document.getElementById("memberResults");
+      if (q.length < 1) { box.style.display = "none"; return; }
+      searchDebounce = setTimeout(async () => {
+        const data = await window.OYA_API.apiFetch(`/accounts/api/users/search/?q=${encodeURIComponent(q)}`);
+        const results = data.results || [];
+        box.innerHTML = results.length
+          ? results.map((r) => `<button type="button" class="dropdown-item" data-id="${r.id}" data-name="${esc(r.text || r.full_name)}" style="width:100%;text-align:left;">${esc(r.text || r.full_name)}</button>`).join("")
+          : `<div class="dropdown-item">No matches</div>`;
+        box.style.display = "";
+        box.querySelectorAll("[data-id]").forEach((btn) => btn.addEventListener("click", () => {
+          document.getElementById("member").value = btn.dataset.id;
+          document.getElementById("memberSelectedName").textContent = btn.dataset.name;
+          document.getElementById("memberSelected").style.display = "";
+          document.getElementById("memberSearch").style.display = "none";
+          box.style.display = "none";
+        }));
+      }, 300);
+    });
+    document.getElementById("memberClear").addEventListener("click", () => {
+      document.getElementById("member").value = "";
+      document.getElementById("memberSelected").style.display = "none";
+      document.getElementById("memberSearch").style.display = "";
+      document.getElementById("memberSearch").value = "";
+    });
+
+    document.getElementById("incomeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+
+      const payload = {
+        income_type: document.getElementById("income_type").value,
+        amount: document.getElementById("amount").value,
+        reason: document.getElementById("reason").value,
+        member: document.getElementById("member").value || null,
+        paid_by: document.getElementById("paid_by").value,
+      };
+
+      try {
+        await window.OYA_API.apiFetch("/finance/api/donations/create/", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams(payload).toString(),
+        });
+        window.location.href = "contributions.html";
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
+        else showErrors([err.message || "Something went wrong."]);
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "contributions", title: "Record Contribution", requireExecutive: true });
+      if (!user) return;
+
+      // Income type choices (all except DUES — dues are recorded through
+      // the dedicated dues tracker, not yet ported).
+      const choices = [
+        ["DONATION", "Donation / Contribution"],
+        ["EVENT", "Event Fee"],
+        ["CASE_FINE", "Case Fine / Resolution"],
+        ["OTHER", "Other"],
+      ];
+      const sel = document.getElementById("income_type");
+      choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; sel.appendChild(o); });
+
+      try {
+        const expenseData = await window.OYA_API.apiFetch("/finance/api/expenses/?page=1");
+        document.getElementById("treasuryBalance").textContent = naira(expenseData.treasury_balance);
+      } catch (_) { /* non-fatal */ }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Contributions | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h1 style="font-size:clamp(1.125rem, 3vw, 1.5rem);">Contributions &amp; Donations</h1>
+              <p style="font-size:clamp(0.75rem, 2vw, 0.875rem);">Non-dues income: donations, event fees, case fines and other contributions</p>
+            </div>
+            <div class="page-header-actions" style="flex-wrap:wrap;gap:0.5rem;">
+              <a href="income-form.html" class="btn btn-primary" id="addBtn" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Record Contribution
+              </a>
+            </div>
+          </div>
+
+          <div class="filters-bar" style="flex-wrap:wrap;gap:0.5rem;">
+            <div class="filter-group">
+              <span class="filter-label" style="font-size:clamp(0.75rem, 1.5vw, 0.8125rem);">Type:</span>
+              <select id="typeFilter" class="form-control" style="width:180px;"><option value="">All Types</option></select>
+            </div>
+            <div style="margin-left:auto;font-size:clamp(0.75rem, 2vw, 0.875rem);color:var(--oya-text-secondary);white-space:nowrap;" id="statsSummary"></div>
+          </div>
+
+          <div class="card">
+            <div class="table-toolbar" style="flex-wrap:wrap;">
+              <div class="toolbar-search" style="max-width:100%;">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="searchInput" placeholder="Search by reason, payer...">
+              </div>
+            </div>
+            <div class="table-container" style="overflow-x:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Type</th><th>Reason</th><th>Payer</th><th>Amount</th><th>Recorded By</th><th>Date</th></tr>
+                </thead>
+                <tbody id="tbody"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">Loading&hellip;</td></tr></tbody>
+              </table>
+            </div>
+            <div class="card-footer" id="paginationFooter" style="display:none;">
+              <span style="font-size:0.8125rem;color:var(--oya-text-muted);" id="paginationSummary"></span>
+              <div class="pagination" id="paginationControls"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+
+    const state = { search: "", type: "", page: 1 };
+    let choicesBuilt = false;
+
+    function renderRow(i) {
+      return `<tr>
+        <td><span class="badge badge-primary">${esc(i.income_type_display)}</span></td>
+        <td>${esc(i.reason)}</td>
+        <td>${esc(i.payer)}</td>
+        <td style="font-weight:600;color:var(--oya-success);">${naira(i.amount)}</td>
+        <td class="cell-muted">${esc(i.created_by || "—")}</td>
+        <td class="cell-muted">${esc((i.created_at || "").slice(0, 10))}</td>
+      </tr>`;
+    }
+
+    function renderPagination(p) {
+      const footer = document.getElementById("paginationFooter");
+      if (p.num_pages <= 1) { footer.style.display = "none"; return; }
+      footer.style.display = "";
+      document.getElementById("paginationSummary").textContent = `Showing ${p.start_index}-${p.end_index} of ${p.count}`;
+      const controls = document.getElementById("paginationControls");
+      let html = "";
+      for (let n = 1; n <= p.num_pages; n++) {
+        html += n === p.page ? `<button class="page-btn active">${n}</button>` : `<a href="#" class="page-btn" data-page="${n}">${n}</a>`;
+      }
+      controls.innerHTML = html;
+      controls.querySelectorAll("[data-page]").forEach((el) => el.addEventListener("click", (e) => { e.preventDefault(); state.page = parseInt(el.dataset.page, 10); load(); }));
+    }
+
+    async function load() {
+      const qs = new URLSearchParams();
+      if (state.search) qs.set("search", state.search);
+      if (state.type) qs.set("type", state.type);
+      qs.set("page", state.page);
+      const tbody = document.getElementById("tbody");
+      try {
+        const data = await window.OYA_API.apiFetch(`/finance/api/donations/?${qs.toString()}`);
+        if (!choicesBuilt) {
+          choicesBuilt = true;
+          const sel = document.getElementById("typeFilter");
+          data.income_type_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; sel.appendChild(o); });
+        }
+        document.getElementById("statsSummary").innerHTML = `<strong style="color:var(--oya-text-primary);">${naira(data.total_donations)}</strong> total contributions`;
+        tbody.innerHTML = data.incomes.length ? data.incomes.map(renderRow).join("") : `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No contributions found.</td></tr>`;
+        renderPagination(data.pagination);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--oya-danger);">Couldn't load: ${esc(err.message)}</td></tr>`;
+      }
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "contributions", title: "Contributions" });
+      if (!user) return;
+      if (user.has_executive_access) document.getElementById("addBtn").style.display = "";
+
+      let debounce;
+      document.getElementById("searchInput").addEventListener("input", (e) => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => { state.search = e.target.value.trim(); state.page = 1; load(); }, 350);
+      });
+      document.getElementById("typeFilter").addEventListener("change", (e) => { state.type = e.target.value; state.page = 1; load(); });
+
+      load();
+    })();
+  </script>
+</body>
+</html>

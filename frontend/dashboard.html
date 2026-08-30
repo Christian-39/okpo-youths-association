@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Dashboard | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+          <div id="loadingState" style="text-align:center;padding:3rem;color:var(--oya-text-muted);">Loading dashboard&hellip;</div>
+          <div id="dashboardContent" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function naira(n) {
+      n = Math.round(Number(n) || 0);
+      return "\u20A6" + n.toLocaleString("en-NG");
+    }
+    function esc(s) {
+      const d = document.createElement("div");
+      d.textContent = s == null ? "" : s;
+      return d.innerHTML;
+    }
+    function timeSince(iso) {
+      const seconds = Math.floor((Date.now() - new Date(iso)) / 1000);
+      const units = [["year", 31536000], ["month", 2592000], ["day", 86400], ["hour", 3600], ["minute", 60]];
+      for (const [name, secs] of units) {
+        const val = Math.floor(seconds / secs);
+        if (val >= 1) return `${val} ${name}${val > 1 ? "s" : ""} ago`;
+      }
+      return "just now";
+    }
+
+    function activityIconPath(action) {
+      if (action === "CREATE") return '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
+      if (action === "DELETE") return '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>';
+      if (action === "UPDATE") return '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>';
+      return '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
+    function activityIconClass(action) {
+      if (action === "CREATE") return "success";
+      if (action === "DELETE") return "danger";
+      if (action === "UPDATE") return "warning";
+      return "primary";
+    }
+
+    function renderWelcomeBanner(user, isExecutive) {
+      return `
+      <div class="card" style="margin-bottom:1.5rem;background:linear-gradient(135deg, var(--oya-primary) 0%, #082e6e 100%);color:#fff;border:none;">
+        <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <h2 style="color:#fff;font-size:clamp(1rem,4vw,1.375rem);margin-bottom:0.375rem;">
+              Welcome back, ${esc(user.full_name || "Member")}
+            </h2>
+            <p style="color:rgba(255,255,255,0.75);font-size:clamp(0.8125rem,3vw,0.9375rem);">
+              Here's what's happening in OKPO Youths Association today.
+            </p>
+          </div>
+          ${isExecutive ? `
+          <div style="display:flex;gap:0.75rem;flex-shrink:0;flex-wrap:wrap;">
+            <a href="member-form.html" class="btn" style="background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(255,255,255,0.25);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Member
+            </a>
+            <a href="finance.html" class="btn" style="background:var(--oya-accent);color:#0F172A;border-color:var(--oya-accent);font-weight:700;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Record Payment
+            </a>
+          </div>` : ""}
+        </div>
+      </div>`;
+    }
+
+    function kpiCard(opts) {
+      return `
+      <div class="kpi-card ${opts.accent || ""}">
+        <div class="kpi-header">
+          <div class="kpi-icon" ${opts.iconStyle ? `style="${opts.iconStyle}"` : ""}>${opts.icon}</div>
+        </div>
+        <div class="kpi-value" ${opts.valueStyle ? `style="${opts.valueStyle}"` : ""}>${opts.value}</div>
+        <div class="kpi-label">${opts.label}</div>
+        ${opts.link ? `<a href="${opts.link.href}" style="font-size:0.75rem;color:var(--oya-primary);">${opts.link.text} &rarr;</a>` : ""}
+      </div>`;
+    }
+
+    const ICONS = {
+      members: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      naira: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+      shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+      project: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>',
+      users2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg>',
+      box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>',
+      folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+      clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>',
+      alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    };
+
+    function renderAdminKpis(d) {
+      const k = d.kpis || {};
+      return `
+      <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+        ${kpiCard({ icon: ICONS.members, value: k.total_active_members || 0, label: "Total Active Members" })}
+        ${kpiCard({ accent: "accent-gold", icon: ICONS.naira, iconStyle: "background:var(--oya-accent-50);color:var(--oya-accent-dark);", value: naira(k.treasury_balance), valueStyle: "color:var(--oya-accent-dark);", label: "Treasury Balance" })}
+        ${kpiCard({ accent: "accent-success", icon: ICONS.shield, iconStyle: "background:var(--oya-success-bg);color:var(--oya-success);", value: k.active_task_force || 0, valueStyle: "color:var(--oya-success);", label: "Active Task Force" })}
+        ${kpiCard({ accent: "accent-warning", icon: ICONS.project, iconStyle: "background:var(--oya-warning-bg);color:var(--oya-warning);", value: k.projects_at_hand || 0, valueStyle: "color:var(--oya-warning);", label: "Ongoing Projects" })}
+      </div>
+      <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+        ${kpiCard({ icon: ICONS.naira, value: naira(d.total_project_donations), label: "Total Project Donations" })}
+        ${kpiCard({ accent: "accent-success", icon: ICONS.project, iconStyle: "background:var(--oya-success-bg);color:var(--oya-success);", value: d.active_fundraising_projects || 0, valueStyle: "color:var(--oya-success);", label: "Active Fundraising" })}
+        ${kpiCard({ accent: "accent-info", icon: ICONS.members, iconStyle: "background:var(--oya-info-bg);color:var(--oya-info);", value: d.total_outside_donors || 0, valueStyle: "color:var(--oya-info);", label: "Total Outside Donors" })}
+        ${kpiCard({ accent: "accent-warning", icon: ICONS.shield, iconStyle: "background:var(--oya-warning-bg);color:var(--oya-warning);", value: naira(d.total_raised_through_invitees), valueStyle: "color:var(--oya-warning);", label: "Raised Through Invitees" })}
+      </div>
+      <div class="section-header" style="margin-bottom:0.75rem;"><h2 style="font-size:1rem;font-weight:700;color:var(--oya-text-primary);">Donation Groups, Pledges &amp; Dues</h2></div>
+      <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+        ${kpiCard({ icon: ICONS.users2, value: d.total_donation_groups || 0, label: "Donation Groups" })}
+        ${kpiCard({ accent: "accent-info", icon: ICONS.members, iconStyle: "background:var(--oya-info-bg);color:var(--oya-info);", value: d.members_in_donation_groups || 0, valueStyle: "color:var(--oya-info);", label: "Members in Donation Groups" })}
+        ${kpiCard({ accent: "accent-success", icon: ICONS.naira, iconStyle: "background:var(--oya-success-bg);color:var(--oya-success);", value: naira(d.total_money_donations), valueStyle: "color:var(--oya-success);", label: "Total Money Donated" })}
+        ${kpiCard({ icon: ICONS.box, value: d.total_material_donations || 0, label: "Material Donations" })}
+      </div>
+      <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+        ${kpiCard({ icon: ICONS.folder, value: d.total_labour_contributions || 0, label: "Labour Contributions" })}
+        ${kpiCard({ accent: "accent-warning", icon: ICONS.clock, iconStyle: "background:var(--oya-warning-bg);color:var(--oya-warning);", value: d.pending_pledges || 0, valueStyle: "color:var(--oya-warning);", label: "Pending Pledges" })}
+        ${kpiCard({ accent: "accent-success", icon: ICONS.check, iconStyle: "background:var(--oya-success-bg);color:var(--oya-success);", value: d.completed_pledges || 0, valueStyle: "color:var(--oya-success);", label: "Completed Pledges" })}
+        ${kpiCard({ accent: "accent-warning", icon: ICONS.naira, iconStyle: "background:var(--oya-warning-bg);color:var(--oya-warning);", value: naira(d.outstanding_pledge_amount), valueStyle: "color:var(--oya-warning);", label: "Outstanding Pledge Amount" })}
+      </div>
+      <div class="dashboard-grid dashboard-grid-2" style="margin-bottom:1.5rem;">
+        ${kpiCard({ accent: "accent-danger", icon: ICONS.alert, iconStyle: "background:var(--oya-danger-bg);color:var(--oya-danger);", value: d.yearly_dues_debtors || 0, valueStyle: "color:var(--oya-danger);", label: "Yearly Dues Debtors", link: { href: "dues-debtors.html", text: "View debtors" } })}
+        ${kpiCard({ accent: "accent-danger", icon: ICONS.naira, iconStyle: "background:var(--oya-danger-bg);color:var(--oya-danger);", value: naira(d.outstanding_dues), valueStyle: "color:var(--oya-danger);", label: "Outstanding Dues" })}
+      </div>`;
+    }
+
+    function renderChartsAndFeeds(d, isExecutive) {
+      const activities = (d.recent_activities || []).slice(0, 5);
+      const cases = (d.urgent_cases || []).slice(0, 5);
+
+      return `
+      <div class="dashboard-grid dashboard-grid-2" style="margin-bottom:1.5rem;">
+        <div class="chart-card">
+          <div class="chart-card-header"><div><div class="chart-card-title">Member Distribution</div><div class="chart-card-subtitle">By membership status</div></div></div>
+          <div class="chart-container chart-container-sm" style="display:flex;align-items:center;">
+            <div style="flex:1;height:100%;"><canvas id="memberDistributionChart"></canvas></div>
+            <div style="padding-left:1.5rem;min-width:140px;">
+              <div style="margin-bottom:0.875rem;">
+                <div style="font-size:clamp(1.25rem,4vw,1.75rem);font-weight:700;">${(d.member_stats && d.member_stats.total) || 0}</div>
+                <div style="font-size:0.8125rem;color:var(--oya-text-muted);">Total Members</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8125rem;"><span style="width:10px;height:10px;border-radius:50%;background:var(--oya-primary);display:inline-block;"></span>Active (${(d.member_stats && d.member_stats.by_status && d.member_stats.by_status.active) || 0})</div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8125rem;"><span style="width:10px;height:10px;border-radius:50%;background:var(--oya-warning);display:inline-block;"></span>Past (${(d.member_stats && d.member_stats.by_status && d.member_stats.by_status.past) || 0})</div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8125rem;"><span style="width:10px;height:10px;border-radius:50%;background:var(--oya-danger);display:inline-block;"></span>Removed (${(d.member_stats && d.member_stats.by_status && d.member_stats.by_status.removed) || 0})</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dashboard-grid dashboard-grid-2" style="margin-bottom:1.5rem;">
+        <div class="chart-card">
+          <div class="chart-card-header"><div><div class="chart-card-title">Clan Distribution</div><div class="chart-card-subtitle">Members by clan/family group</div></div></div>
+          <div class="chart-container"><canvas id="clanDistributionChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-header-title">Recent Activities</div><div class="card-header-subtitle">Latest actions across the system</div></div>
+            <a href="audit-logs.html" class="btn btn-sm btn-ghost">View All</a>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="activity-feed" style="padding:0 1.25rem;">
+              ${activities.length ? activities.map((a) => `
+              <div class="activity-item" style="padding:0.75rem 0;">
+                <div class="activity-icon ${activityIconClass(a.action)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${activityIconPath(a.action)}</svg></div>
+                <div class="activity-content" style="min-width:0;">
+                  <div class="activity-text" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(220px,50vw);" title="${esc(a.description)}">${esc((a.description || "").slice(0, 60))}</div>
+                  <div class="activity-time">${timeSince(a.created_at)}</div>
+                </div>
+              </div>`).join("") : `<div class="activity-item" style="padding:0.75rem 0;"><div class="activity-content"><div class="activity-text">No recent activities</div></div></div>`}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dashboard-grid dashboard-grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-header-title" style="display:flex;align-items:center;gap:0.5rem;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--oya-danger)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Urgent Cases</div><div class="card-header-subtitle">Requires immediate attention</div></div>
+            <a href="cases.html" class="btn btn-sm btn-ghost">View All</a>
+          </div>
+          <div class="card-body">
+            ${cases.length ? cases.map((c, i) => `
+            <div class="urgent-case ${c.status === "OPEN" ? "high" : "medium"}" style="display:flex;align-items:center;gap:1rem;padding:0.875rem 0;${i < cases.length - 1 ? "border-bottom:1px solid var(--oya-border);" : ""}">
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;color:var(--oya-text-primary);margin-bottom:0.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(c.title)}">${esc((c.title || "").slice(0, 40))}</div>
+                <div style="font-size:0.8125rem;color:var(--oya-text-muted);">${esc(c.case_number)} &middot; ${esc(c.respondent_name || "Unknown")} &middot; Filed ${esc(c.created_at ? c.created_at.slice(0, 10) : "")}</div>
+              </div>
+              <span class="badge badge-${c.status === "OPEN" ? "danger" : "warning"}">${c.status === "OPEN" ? "Open" : "In Progress"}</span>
+            </div>`).join("") : `
+            <div style="text-align:center;padding:2rem;color:var(--oya-text-muted);">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:0.75rem;opacity:0.5;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <p>No urgent cases at this time</p>
+            </div>`}
+          </div>
+        </div>
+        ${isExecutive ? `
+        <div class="card">
+          <div class="card-header"><div><div class="card-header-title">Quick Actions</div><div class="card-header-subtitle">Frequently used operations</div></div></div>
+          <div class="card-body">
+            <div class="quick-actions" style="display:grid;grid-template-columns:repeat(2, 1fr);gap:0.75rem;">
+              <a href="member-form.html" class="quick-action-btn" style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem;border:1px solid var(--oya-border);border-radius:var(--oya-radius);text-decoration:none;color:var(--oya-text-primary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>New Member</a>
+              <a href="finance.html" class="quick-action-btn" style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem;border:1px solid var(--oya-border);border-radius:var(--oya-radius);text-decoration:none;color:var(--oya-text-primary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Record Income</a>
+              <a href="cases.html" class="quick-action-btn" style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem;border:1px solid var(--oya-border);border-radius:var(--oya-radius);text-decoration:none;color:var(--oya-text-primary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>File Case</a>
+              <a href="projects.html" class="quick-action-btn" style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem;border:1px solid var(--oya-border);border-radius:var(--oya-radius);text-decoration:none;color:var(--oya-text-primary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>New Project</a>
+            </div>
+          </div>
+        </div>` : ""}
+      </div>`;
+    }
+
+    function renderMemberFallback(user, d) {
+      // Simplified member-facing view. Full parity with the original
+      // member_dashboard.html (dues/payment history, clan info, YTD
+      // financial trend, announcements feed) is tracked as remaining
+      // work in the migration report — that view reads several context
+      // keys the API doesn't build yet.
+      const c = d.contributions || [];
+      const total = d.total_contributed || 0;
+      return `
+      <div class="dashboard-grid dashboard-grid-2" style="margin-bottom:1.5rem;">
+        ${kpiCard({ accent: "accent-success", icon: ICONS.naira, iconStyle: "background:var(--oya-success-bg);color:var(--oya-success);", value: naira(total), valueStyle: "color:var(--oya-success);", label: "Total Contributions" })}
+        ${kpiCard({ icon: ICONS.folder, value: c.length, label: "Contribution Records" })}
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-header-title">Recent Contributions</div></div><a href="profile.html" class="btn btn-sm btn-ghost">View Profile</a></div>
+        <div class="card-body" style="padding:0;">
+          <div class="activity-feed" style="padding:0 1.25rem;">
+            ${c.length ? c.slice(0, 5).map((p) => `
+            <div class="activity-item" style="padding:0.75rem 0;">
+              <div class="activity-icon success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="activity-content"><div class="activity-text">${esc(p.description || p.purpose || "Contribution")}</div><div class="activity-time">${esc((p.created_at || "").slice(0, 10))} &middot; ${naira(p.amount)}</div></div>
+            </div>`).join("") : `<div class="activity-item" style="padding:0.75rem 0;"><div class="activity-content"><div class="activity-text">No contribution records found</div></div></div>`}
+          </div>
+        </div>
+      </div>`;
+    }
+
+    let clanChart, memberChart;
+
+    function renderCharts(d) {
+      const clanCtx = document.getElementById("clanDistributionChart");
+      const cd = d.clan_distribution || {};
+      if (clanCtx && cd.labels && cd.labels.length) {
+        clanChart = new Chart(clanCtx, {
+          type: "bar",
+          data: { labels: cd.labels, datasets: [{ label: "Members", data: cd.data, backgroundColor: "var(--oya-primary)", borderRadius: 4 }] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: "var(--oya-border)" } }, x: { grid: { display: false } } } },
+        });
+      }
+      const memberCtx = document.getElementById("memberDistributionChart");
+      const ms = (d.member_stats && d.member_stats.by_status) || {};
+      if (memberCtx) {
+        memberChart = new Chart(memberCtx, {
+          type: "doughnut",
+          data: { labels: ["Active", "Past", "Removed"], datasets: [{ data: [ms.active || 0, ms.past || 0, ms.removed || 0], backgroundColor: ["var(--oya-primary)", "var(--oya-warning)", "var(--oya-danger)"], borderWidth: 0 }] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: "70%" },
+        });
+      }
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "dashboard", title: "Dashboard" });
+      if (!user) return;
+
+      const contentEl = document.getElementById("dashboardContent");
+      const loadingEl = document.getElementById("loadingState");
+
+      try {
+        const d = await window.OYA_API.apiFetch("/dashboard/api/summary/");
+        const isExecutive = !!d.is_executive;
+
+        let html = renderWelcomeBanner(user, isExecutive);
+        html += d.is_admin || isExecutive ? renderAdminKpis(d) + renderChartsAndFeeds(d, isExecutive) : renderMemberFallback(user, d);
+
+        contentEl.innerHTML = html;
+        loadingEl.style.display = "none";
+        contentEl.style.display = "";
+
+        if (d.is_admin || isExecutive) renderCharts(d);
+      } catch (err) {
+        loadingEl.innerHTML = `<div class="alert alert-danger" style="max-width:480px;margin:0 auto;">Couldn't load the dashboard: ${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

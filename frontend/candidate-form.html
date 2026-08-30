@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Candidate Form | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:640px;">
+
+          <div class="page-header"><div class="page-header-left"><h1 id="formTitle" style="font-size:clamp(1.125rem,3vw,1.5rem);">Add Candidate</h1></div></div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="candidateForm" class="card">
+            <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="election">Election</label>
+                <select id="election" name="election" class="form-select" required></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="member">Member</label>
+                <select id="member" name="member" class="form-select" required><option value="">Select a member</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="post">Post/Position</label>
+                <select id="post" name="post" class="form-select" required></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="photo">Campaign Photo</label>
+                <input type="file" id="photo" name="photo" class="form-control" accept="image/*">
+                <img id="photoPreview" style="display:none;margin-top:0.5rem;max-width:120px;max-height:120px;border-radius:var(--oya-radius);object-fit:cover;">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="manifesto">Manifesto</label>
+                <textarea id="manifesto" name="manifesto" class="form-control" rows="5" placeholder="Candidate's manifesto / pitch to voters..."></textarea>
+              </div>
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="elections.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = [];
+      if (Array.isArray(errors)) lines.push(...errors);
+      else if (errors && typeof errors === "object") {
+        Object.entries(errors).forEach(([field, msgs]) => (Array.isArray(msgs) ? msgs : [msgs]).forEach((m) => lines.push(`${field}: ${m.message || m}`)));
+      }
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    const electionIdParam = params.get("election");
+    const isEdit = !!id;
+
+    document.getElementById("photo").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = document.getElementById("photoPreview");
+      img.src = URL.createObjectURL(file);
+      img.style.display = "";
+    });
+
+    document.getElementById("candidateForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+
+      const formData = new FormData(document.getElementById("candidateForm"));
+      try {
+        const endpoint = isEdit ? `/elections/api/candidates/${id}/update/` : "/elections/api/candidates/create/";
+        const data = await window.OYA_API.apiFetch(endpoint, { method: "POST", body: formData });
+        window.location.href = `election-detail.html?id=${data.candidate.election_id}`;
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
+        else showErrors([err.message || "Something went wrong."]);
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "elections", title: isEdit ? "Edit Candidate" : "Add Candidate", requireExecutive: true });
+      if (!user) return;
+
+      try {
+        const meta = await window.OYA_API.apiFetch("/elections/api/candidates/form-meta/");
+        const memberSelect = document.getElementById("member");
+        meta.members.forEach((m) => { const o = document.createElement("option"); o.value = m.id; o.textContent = `${m.full_name} (${m.serial_number})`; memberSelect.appendChild(o); });
+        const postSelect = document.getElementById("post");
+        meta.post_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; postSelect.appendChild(o); });
+
+        const electionsData = await window.OYA_API.apiFetch("/elections/api/list/?status=UPCOMING");
+        const ongoing = await window.OYA_API.apiFetch("/elections/api/list/?status=ONGOING");
+        const electionSelect = document.getElementById("election");
+        [...electionsData.elections, ...ongoing.elections].forEach((el) => {
+          const o = document.createElement("option"); o.value = el.id; o.textContent = el.title; electionSelect.appendChild(o);
+        });
+        if (electionIdParam) electionSelect.value = electionIdParam;
+
+        if (isEdit) {
+          document.getElementById("formTitle").textContent = "Edit Candidate";
+          try {
+            const { candidate } = await window.OYA_API.apiFetch(`/elections/api/candidates/${id}/`);
+            electionSelect.value = candidate.election_id;
+            memberSelect.value = candidate.member.id;
+            postSelect.value = candidate.post;
+            document.getElementById("manifesto").value = candidate.manifesto || "";
+            if (candidate.photo_url) {
+              const img = document.getElementById("photoPreview");
+              img.src = candidate.photo_url; img.style.display = "";
+            }
+          } catch (err) {
+            showErrors([err.message || "Couldn't load the candidate."]);
+          }
+        }
+      } catch (err) {
+        showErrors([err.message || "Couldn't load the form."]);
+      }
+    })();
+  </script>
+</body>
+</html>

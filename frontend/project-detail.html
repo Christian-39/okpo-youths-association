@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Project Details | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+          <div id="loadingState" style="text-align:center;padding:3rem;color:var(--oya-text-muted);">Loading&hellip;</div>
+          <div id="detailContent" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+    function fmtDate(iso) { return iso ? new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "2-digit" }) : "—"; }
+    function statusBadge(s) {
+      if (s === "FUTURE") return `<span class="badge badge-info">Planned</span>`;
+      if (s === "AT_HAND") return `<span class="badge badge-warning">In Progress</span>`;
+      if (s === "FINISHED") return `<span class="badge badge-success">Completed</span>`;
+      return "";
+    }
+
+    function render(data, isExecutive) {
+      const p = data.project;
+      const fillClass = p.progress_percentage === 100 ? "success" : p.progress_percentage >= 50 ? "warning" : "";
+
+      let fundraisingHtml = "";
+      if (p.enable_fundraising && data.fundraising_data) {
+        const fd = data.fundraising_data;
+        fundraisingHtml = `
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="card-header"><div class="card-header-title">Fundraising Campaign</div></div>
+          <div class="card-body">
+            <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+              <div class="kpi-card"><div class="kpi-value">${naira(p.target_amount)}</div><div class="kpi-label">Target Amount</div></div>
+              <div class="kpi-card accent-success"><div class="kpi-value" style="color:var(--oya-success);">${naira(p.fundraising_amount_raised)}</div><div class="kpi-label">Amount Raised</div></div>
+              <div class="kpi-card accent-warning"><div class="kpi-value" style="color:var(--oya-warning);">${naira(p.fundraising_remaining_amount)}</div><div class="kpi-label">Remaining</div></div>
+              <div class="kpi-card accent-info"><div class="kpi-value" style="color:var(--oya-info);">${p.fundraising_progress_percentage}%</div><div class="kpi-label">Progress</div></div>
+            </div>
+            <div style="margin-bottom:1.5rem;">
+              <div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:0.5rem;"><span>Fundraising Progress</span><span style="font-weight:600;">${p.fundraising_progress_percentage}%</span></div>
+              <div class="progress-bar" style="height:12px;"><div class="progress-fill ${p.fundraising_progress_percentage === 100 ? "success" : ""}" style="width:${p.fundraising_progress_percentage}%"></div></div>
+            </div>
+            <div class="dashboard-grid dashboard-grid-2">
+              <div>
+                <h4 style="font-size:0.9375rem;margin-bottom:0.75rem;">Top Member Donors</h4>
+                ${fd.top_member_donors.length ? fd.top_member_donors.map((d) => `<div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--oya-border);font-size:0.875rem;"><span>${esc(d.member__full_name)}</span><strong>${naira(d.total)}</strong></div>`).join("") : `<p class="cell-muted">No member donations yet.</p>`}
+              </div>
+              <div>
+                <h4 style="font-size:0.9375rem;margin-bottom:0.75rem;">Top Outside Donors</h4>
+                ${fd.top_outside_donors.length ? fd.top_outside_donors.map((d) => `<div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--oya-border);font-size:0.875rem;"><span>${esc(d.outside_donor__full_name)}</span><strong>${naira(d.total)}</strong></div>`).join("") : `<p class="cell-muted">No outside donations yet.</p>`}
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }
+
+      return `
+      <div class="detail-header" style="flex-wrap:wrap;gap:1rem;">
+        <div>
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+            <h1 style="font-size:clamp(1.125rem,3vw,1.5rem);">${esc(p.title)}</h1>
+            ${statusBadge(p.status)}
+          </div>
+          <p style="color:var(--oya-text-secondary);font-size:0.9375rem;">${esc(p.description ? p.description.slice(0, 200) : "No description provided.")}</p>
+        </div>
+        ${isExecutive ? `<div class="page-header-actions"><a href="project-form.html?id=${p.id}" class="btn btn-primary">Update Progress</a></div>` : ""}
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <div>
+              <div style="font-size:1.25rem;font-weight:700;">${p.progress_percentage}% Complete</div>
+              <div style="font-size:0.875rem;color:var(--oya-text-muted);">
+                ${p.status === "FUTURE" ? "Project not yet started" : p.status === "AT_HAND" ? "Project is currently in progress" : "Project completed successfully"}
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.875rem;color:var(--oya-text-muted);">Budget</div>
+              <div style="font-weight:600;color:var(--oya-primary);">${naira(p.budget)}</div>
+            </div>
+          </div>
+          <div class="progress-bar" style="height:12px;"><div class="progress-fill ${fillClass}" style="width:${p.progress_percentage}%"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:0.75rem;font-size:0.75rem;color:var(--oya-text-muted);">
+            <span>Created: ${fmtDate(p.created_at)}</span><span>Updated: ${fmtDate(p.updated_at)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid dashboard-grid-2" style="margin-bottom:1.5rem;">
+        <div class="card">
+          <div class="card-header"><div class="card-header-title">Project Information</div></div>
+          <div class="card-body">
+            <div class="detail-meta-grid">
+              <div class="meta-item"><span class="meta-label">Title</span><span class="meta-value">${esc(p.title)}</span></div>
+              <div class="meta-item"><span class="meta-label">Status</span><span class="meta-value">${statusBadge(p.status)}</span></div>
+              <div class="meta-item"><span class="meta-label">Budget</span><span class="meta-value">${naira(p.budget)}</span></div>
+              <div class="meta-item"><span class="meta-label">Progress</span><span class="meta-value">${p.progress_percentage}%</span></div>
+              <div class="meta-item" style="grid-column:1 / -1;"><span class="meta-label">Description</span><span class="meta-value" style="font-weight:400;">${esc(p.description || "No description provided.")}</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-header-title">Budget &amp; Progress Overview</div></div>
+          <div class="card-body">
+            <div style="border-top:1px solid var(--oya-border);padding-top:0.75rem;">
+              <div style="display:flex;justify-content:space-between;font-size:0.9375rem;font-weight:700;"><span>Project ID</span><span style="color:var(--oya-text-muted);">#${p.id}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${fundraisingHtml}`;
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "projects", title: "Project Details" });
+      if (!user) return;
+      const id = new URLSearchParams(window.location.search).get("id");
+      const contentEl = document.getElementById("detailContent");
+      const loadingEl = document.getElementById("loadingState");
+      if (!id) { loadingEl.innerHTML = `<div class="alert alert-danger">No project specified.</div>`; return; }
+      try {
+        const data = await window.OYA_API.apiFetch(`/projects/api/${id}/`);
+        contentEl.innerHTML = render(data, !!user.has_executive_access);
+        loadingEl.style.display = "none";
+        contentEl.style.display = "";
+      } catch (err) {
+        loadingEl.innerHTML = `<div class="alert alert-danger">Couldn't load this project: ${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

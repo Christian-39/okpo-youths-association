@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Member Form | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:720px;">
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h1 id="formTitle" style="font-size:clamp(1.125rem, 3vw, 1.5rem);">Add Member</h1>
+              <p style="font-size:clamp(0.75rem, 2vw, 0.875rem);">Fill in the member's details below</p>
+            </div>
+          </div>
+
+          <div id="pinNotice" style="display:none;margin-bottom:1rem;"></div>
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="memberForm" class="card" novalidate>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+
+              <div class="form-group">
+                <label class="form-label" for="serial_number">Serial Number</label>
+                <input type="text" id="serial_number" name="serial_number" class="form-input" placeholder="OYA-2026-0001" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="full_name">Full Name</label>
+                <input type="text" id="full_name" name="full_name" class="form-input" placeholder="Enter full name" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="phone">Phone Number</label>
+                <input type="text" id="phone" name="phone" class="form-input" placeholder="08012345678">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="age">Age</label>
+                <input type="number" id="age" name="age" class="form-input" min="18" max="55" placeholder="18-55" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="umu_nna_clan">Umu Nna Clan</label>
+                <select id="umu_nna_clan" name="umu_nna_clan" class="form-select">
+                  <option value="">-- Select Clan --</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="photo">Photo</label>
+                <input type="file" id="photo" name="photo" class="form-input" accept="image/*">
+                <img id="photoPreview" style="display:none;margin-top:0.5rem;max-width:120px;max-height:120px;border-radius:var(--oya-radius);object-fit:cover;">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;">
+                  <input type="checkbox" id="is_abroad" name="is_abroad" class="form-check-input">
+                  Living Abroad?
+                </label>
+              </div>
+
+              <div class="form-group" id="nigerianStateGroup">
+                <label class="form-label" for="nigerian_state">Nigerian State</label>
+                <select id="nigerian_state" name="nigerian_state" class="form-select">
+                  <option value="">-- Select State --</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="abroadCountryGroup" style="display:none;">
+                <label class="form-label" for="abroad_country">Country (if abroad)</label>
+                <input type="text" id="abroad_country" name="abroad_country" class="form-input" placeholder="Enter country name (e.g., USA, UK, Canada)">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="year_joined">Year Joined</label>
+                <input type="number" id="year_joined" name="year_joined" class="form-input" min="2020" required>
+                <span class="form-help" style="font-size:0.8125rem;color:var(--oya-text-muted);">The year this member joined the association. Dues tracking starts from this year.</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="status">Status</label>
+                <select id="status" name="status" class="form-select">
+                </select>
+              </div>
+
+              <div class="form-group" id="pinGroup">
+                <label class="form-label" for="pin">PIN (6 digits)</label>
+                <input type="password" id="pin" name="pin" class="form-input" maxlength="6" inputmode="numeric" placeholder="Leave blank to auto-generate">
+                <span class="form-help" style="font-size:0.8125rem;color:var(--oya-text-muted);">6-digit PIN for login. Leave blank to auto-generate.</span>
+              </div>
+
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="members.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save Member</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+
+    // Mirrors members/models.py's NIGERIAN_STATES list.
+    const NIGERIAN_STATES = [
+      "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
+      "Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT - Abuja","Gombe",
+      "Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos",
+      "Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto",
+      "Taraba","Yobe","Zamfara",
+    ];
+
+    const params = new URLSearchParams(window.location.search);
+    const memberId = params.get("id");
+    const isEdit = !!memberId;
+
+    function toggleAbroadFields() {
+      const abroad = document.getElementById("is_abroad").checked;
+      document.getElementById("nigerianStateGroup").style.display = abroad ? "none" : "";
+      document.getElementById("abroadCountryGroup").style.display = abroad ? "" : "none";
+    }
+
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = [];
+      if (Array.isArray(errors)) lines.push(...errors);
+      else if (errors && typeof errors === "object") {
+        Object.entries(errors).forEach(([field, msgs]) => {
+          (Array.isArray(msgs) ? msgs : [msgs]).forEach((m) => lines.push(`${field}: ${m.message || m}`));
+        });
+      }
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    function showPin(pin, label) {
+      if (!pin) return;
+      const box = document.getElementById("pinNotice");
+      box.innerHTML = `<div class="alert alert-success">${label}: <strong style="font-size:1.125rem;letter-spacing:0.1em;">${esc(pin)}</strong> — save this, it won't be shown again.</div>`;
+      box.style.display = "";
+    }
+
+    async function loadMetaAndMember() {
+      // Reuse the existing list endpoint for clan options + status choices
+      // rather than adding a separate metadata endpoint.
+      const listData = await window.OYA_API.apiFetch("/members/api/list/?page=1");
+      const clanSelect = document.getElementById("umu_nna_clan");
+      listData.clans.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c.id; opt.textContent = c.name;
+        clanSelect.appendChild(opt);
+      });
+      const statusSelect = document.getElementById("status");
+      listData.status_choices.forEach(([value, label]) => {
+        const opt = document.createElement("option");
+        opt.value = value; opt.textContent = label;
+        statusSelect.appendChild(opt);
+      });
+
+      const stateSelect = document.getElementById("nigerian_state");
+      NIGERIAN_STATES.forEach((s) => {
+        const opt = document.createElement("option");
+        opt.value = s; opt.textContent = s;
+        stateSelect.appendChild(opt);
+      });
+
+      if (isEdit) {
+        document.getElementById("formTitle").textContent = "Edit Member";
+        document.getElementById("pin").placeholder = "Leave blank to keep current PIN";
+        const { member } = await window.OYA_API.apiFetch(`/members/api/${memberId}/`);
+        document.getElementById("serial_number").value = member.serial_number || "";
+        document.getElementById("full_name").value = member.full_name || "";
+        document.getElementById("phone").value = member.phone || "";
+        document.getElementById("age").value = member.age != null ? member.age : "";
+        document.getElementById("year_joined").value = member.year_joined || "";
+        if (member.clan) clanSelect.value = member.clan.id;
+        statusSelect.value = member.status;
+        if (member.photo_url) {
+          const img = document.getElementById("photoPreview");
+          img.src = member.photo_url; img.style.display = "";
+        }
+        toggleAbroadFields();
+      } else {
+        document.getElementById("year_joined").value = new Date().getFullYear();
+      }
+    }
+
+    document.getElementById("is_abroad").addEventListener("change", toggleAbroadFields);
+    document.getElementById("photo").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = document.getElementById("photoPreview");
+      img.src = URL.createObjectURL(file);
+      img.style.display = "";
+    });
+
+    document.getElementById("memberForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+
+      const form = document.getElementById("memberForm");
+      const formData = new FormData(form);
+      // Checkbox only appears in FormData when checked — normalize.
+      if (!document.getElementById("is_abroad").checked) formData.set("is_abroad", "");
+
+      try {
+        const endpoint = isEdit ? `/members/api/${memberId}/update/` : "/members/api/create/";
+        const data = await window.OYA_API.apiFetch(endpoint, { method: "POST", body: formData });
+        const pin = data.generated_pin || data.updated_pin;
+        if (pin) {
+          showPin(pin, isEdit ? "Updated PIN" : "Generated PIN");
+          setTimeout(() => { window.location.href = `member-detail.html?id=${data.member.id}`; }, 3500);
+        } else {
+          window.location.href = `member-detail.html?id=${data.member.id}`;
+        }
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data);
+        else showErrors([err.message || "Something went wrong."]);
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "members", title: isEdit ? "Edit Member" : "Add Member", requireExecutive: true });
+      if (!user) return;
+      try {
+        await loadMetaAndMember();
+      } catch (err) {
+        showErrors([err.message || "Couldn't load the form."]);
+      }
+    })();
+  </script>
+</body>
+</html>

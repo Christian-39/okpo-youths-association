@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Prepaid Dues | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h1 style="font-size:clamp(1.125rem, 3vw, 1.5rem);">Prepaid Dues</h1>
+              <p style="font-size:clamp(0.75rem, 2vw, 0.875rem);">Members who have paid dues for future years</p>
+            </div>
+            <div class="page-header-actions"><a href="dues.html" class="btn btn-secondary">Back to Tracker</a></div>
+          </div>
+
+          <div class="dashboard-grid dashboard-grid-2" style="margin-bottom:1.5rem;">
+            <div class="kpi-card accent-success"><div class="kpi-value" style="color:var(--oya-success);" id="kpiTotal">—</div><div class="kpi-label">Total Prepaid Amount</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="kpiMembers">—</div><div class="kpi-label">Members with Prepaid Dues</div></div>
+          </div>
+
+          <div class="card">
+            <div class="table-container" style="overflow-x:auto;">
+              <table class="data-table" style="white-space:nowrap;">
+                <thead><tr><th>Member</th><th>Years Prepaid</th><th>Total Amount</th><th>Recorded By</th><th style="width:60px;"></th></tr></thead>
+                <tbody id="tbody"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">Loading&hellip;</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "dues", title: "Prepaid Dues" });
+      if (!user) return;
+      const tbody = document.getElementById("tbody");
+      try {
+        const data = await window.OYA_API.apiFetch("/finance/api/dues/prepaid/");
+        document.getElementById("kpiTotal").textContent = naira(data.total_prepaid_amount);
+        document.getElementById("kpiMembers").textContent = data.prepaid_members_count;
+        tbody.innerHTML = data.prepaid_records.length ? data.prepaid_records.map((r) => `
+          <tr>
+            <td><a href="prepaid-detail.html?id=${r.member.id}" class="cell-name" style="text-decoration:none;">${esc(r.member.full_name)}</a><div class="cell-muted">${esc(r.member.serial_number)}</div></td>
+            <td>${r.years.join(", ")}</td>
+            <td style="font-weight:600;color:var(--oya-success);">${naira(r.total_amount)}</td>
+            <td class="cell-muted">${esc(r.recorded_by || "—")}</td>
+            <td><a href="prepaid-detail.html?id=${r.member.id}" class="table-action-btn" title="View"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>
+          </tr>`).join("") : `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No prepaid dues records.</td></tr>`;
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--oya-danger);">Couldn't load: ${esc(err.message)}</td></tr>`;
+      }
+    })();
+  </script>
+</body>
+</html>

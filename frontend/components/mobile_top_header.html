@@ -1,0 +1,53 @@
+<header class="mobile-top-header" id="mobileTopHeader">
+  <a href="dashboard.html" class="mobile-brand">
+    <img src="assets/images/oya_logo.png" alt="OYA" class="mobile-logo-img" />
+    <span class="mobile-logo-text">OYA</span>
+  </a>
+  <div class="mobile-header-actions">
+    <button class="mobile-theme-btn" id="mobileThemeBtn" aria-label="Toggle Theme" title="Cycle Theme">
+      <svg class="theme-icon-light" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg>
+      <svg class="theme-icon-dark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
+      <svg class="theme-icon-system" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+    </button>
+    <a href="profile.html" class="mobile-users-btn" aria-label="Users" title="All Users">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+    </a>
+    <button type="button" class="mobile-hamburger" id="mobileHamburger" aria-label="Open Menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+    </button>
+  </div>
+</header>
+
+<aside id="mobileSidebar" class="mobile-sidebar">
+  <div class="mobile-sidebar-header">
+    <a href="dashboard.html" class="mobile-brand">
+      <img src="assets/images/oya_logo.png" alt="OYA" class="mobile-logo-img" />
+      <span class="mobile-logo-text">OYA System</span>
+    </a>
+    <button type="button" id="mobileSidebarClose" class="mobile-sidebar-close" aria-label="Close Menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+    </button>
+  </div>
+
+  <a href="profile.html" class="mobile-profile-link" id="mobileProfileLink">
+    <div class="avatar avatar-sm" style="width:44px;height:44px;" id="mobileSidebarAvatar">?</div>
+    <div>
+      <div id="mobileSidebarName">Guest</div>
+      <div id="mobileSidebarRole" style="font-size:0.8125rem;opacity:0.7;">Please sign in</div>
+    </div>
+  </a>
+
+  <nav id="mobileSidebarNav" class="mobile-sidebar-nav">
+    <!-- Populated by shell.js by cloning the same nav items as the desktop sidebar,
+         rendered with the .mobile-nav-link class so they pick up the original
+         mobile-sidebar CSS instead of the desktop .nav-item styles. -->
+  </nav>
+
+  <div style="padding:1rem 1.25rem;border-top:1px solid var(--oya-border);margin-top:auto;">
+    <a href="#" id="mobileSidebarLogoutLink" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;color:var(--oya-danger);text-decoration:none;font-size:0.875rem;font-weight:500;border-radius:var(--oya-radius);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+      Sign Out
+    </a>
+  </div>
+</aside>
+<div id="mobileSidebarOverlay" class="mobile-sidebar-overlay"></div>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Record Dues Payment | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:640px;">
+
+          <div class="page-header"><div class="page-header-left"><h1 style="font-size:clamp(1.125rem,3vw,1.5rem);">Record Dues Payment</h1><p style="font-size:0.875rem;color:var(--oya-text-muted);">Enter a total amount — it will be smart-allocated across outstanding years automatically.</p></div></div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+          <div id="resultBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="allocateForm" class="card">
+            <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div class="form-group" style="position:relative;">
+                <label class="form-label" for="memberSearch">Member</label>
+                <input type="text" id="memberSearch" class="form-control" placeholder="Search member by name, no. or phone…" autocomplete="off" required>
+                <input type="hidden" id="member" name="member">
+                <div id="memberResults" class="dropdown-menu" style="position:absolute;top:100%;left:0;right:0;z-index:20;display:none;max-height:220px;overflow-y:auto;"></div>
+              </div>
+
+              <div id="outstandingPreview" style="display:none;padding:0.875rem;background:var(--oya-bg);border-radius:var(--oya-radius);font-size:0.8125rem;"></div>
+
+              <div class="form-group">
+                <label class="form-label" for="total_amount">Total Amount (&#x20A6;)</label>
+                <input type="number" id="total_amount" name="total_amount" class="form-control" step="0.01" min="0.01" placeholder="0.00" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="payment_method">Payment Method</label>
+                <select id="payment_method" name="payment_method" class="form-select"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="receipt_reference">Receipt Reference</label>
+                <input type="text" id="receipt_reference" name="receipt_reference" class="form-control" placeholder="e.g., TRX-123456, Receipt #001">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="payment_date">Payment Date</label>
+                <input type="date" id="payment_date" name="payment_date" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="notes">Notes</label>
+                <textarea id="notes" name="notes" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="dues.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Allocate Payment</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = [];
+      if (Array.isArray(errors)) lines.push(...errors);
+      else if (errors && typeof errors === "object") Object.entries(errors).forEach(([f, m]) => (Array.isArray(m) ? m : [m]).forEach((x) => lines.push(`${f}: ${x.message || x}`)));
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    let searchDebounce;
+    document.getElementById("memberSearch").addEventListener("input", (e) => {
+      clearTimeout(searchDebounce);
+      const q = e.target.value.trim();
+      const box = document.getElementById("memberResults");
+      if (q.length < 1) { box.style.display = "none"; return; }
+      searchDebounce = setTimeout(async () => {
+        const data = await window.OYA_API.apiFetch(`/accounts/api/users/search/?q=${encodeURIComponent(q)}`);
+        const results = data.results || [];
+        box.innerHTML = results.length
+          ? results.map((r) => `<button type="button" class="dropdown-item" data-id="${r.id}" data-name="${esc(r.text || r.full_name)}" style="width:100%;text-align:left;">${esc(r.text || r.full_name)}</button>`).join("")
+          : `<div class="dropdown-item">No matches</div>`;
+        box.style.display = "";
+        box.querySelectorAll("[data-id]").forEach((btn) => btn.addEventListener("click", async () => {
+          document.getElementById("member").value = btn.dataset.id;
+          document.getElementById("memberSearch").value = btn.dataset.name;
+          box.style.display = "none";
+          await loadPreview(btn.dataset.id);
+        }));
+      }, 300);
+    });
+
+    async function loadPreview(memberId) {
+      const box = document.getElementById("outstandingPreview");
+      try {
+        const data = await window.OYA_API.apiFetch(`/finance/api/dues/preview/?member_id=${memberId}`);
+        if (!data.outstanding.length) {
+          box.innerHTML = `<span style="color:var(--oya-success);">This member has no outstanding dues.</span>`;
+        } else {
+          box.innerHTML = `<strong>Outstanding years:</strong> ` + data.outstanding.map((o) => `${o.year} (${naira(o.remaining_balance)} owed)`).join(", ");
+        }
+        box.style.display = "";
+      } catch (_) { box.style.display = "none"; }
+    }
+
+    document.getElementById("allocateForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+      document.getElementById("resultBox").style.display = "none";
+
+      const payload = new URLSearchParams({
+        member: document.getElementById("member").value,
+        total_amount: document.getElementById("total_amount").value,
+        payment_method: document.getElementById("payment_method").value,
+        receipt_reference: document.getElementById("receipt_reference").value,
+        payment_date: document.getElementById("payment_date").value,
+        notes: document.getElementById("notes").value,
+      });
+
+      try {
+        const data = await window.OYA_API.apiFetch("/finance/api/dues/allocate/", {
+          method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: payload.toString(),
+        });
+        const summary = data.allocations.map((a) => `${a.year}: ${naira(a.allocated)}`).join(", ");
+        const resultBox = document.getElementById("resultBox");
+        resultBox.className = "alert alert-success";
+        resultBox.innerHTML = `Allocated ${naira(data.total_allocated)} across: ${summary}.` + (data.remaining > 0 ? ` ${naira(data.remaining)} could not be allocated.` : "");
+        resultBox.style.display = "";
+        document.getElementById("allocateForm").reset();
+        document.getElementById("outstandingPreview").style.display = "none";
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || [err.data.detail].filter(Boolean));
+        else showErrors([err.message || "Something went wrong."]);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "dues", title: "Record Dues Payment", requireExecutive: true });
+      if (!user) return;
+      try {
+        const meta = await window.OYA_API.apiFetch("/finance/api/dues/allocate/form-meta/");
+        const sel = document.getElementById("payment_method");
+        meta.payment_method_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; sel.appendChild(o); });
+        document.getElementById("payment_date").value = new Date().toISOString().slice(0, 10);
+      } catch (err) {
+        showErrors([err.message || "Couldn't load the form."]);
+      }
+    })();
+  </script>
+</body>
+</html>

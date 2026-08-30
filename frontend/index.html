@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OYA</title>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    (async function () {
+      const user = await window.OYA_AUTH.getCurrentUser();
+      window.location.href = user ? window.OYA_CONFIG.ROUTES.dashboard : window.OYA_CONFIG.ROUTES.login;
+    })();
+  </script>
+</head>
+<body></body>
+</html>

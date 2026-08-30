@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Executive Details | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+          <div id="loadingState" style="text-align:center;padding:3rem;color:var(--oya-text-muted);">Loading&hellip;</div>
+          <div id="detailContent" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function fmtDate(iso) { return iso ? new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "2-digit" }) : "—"; }
+    function metaItem(label, value) {
+      return `<div class="meta-item"><span class="meta-label">${label}</span><span class="meta-value">${value}</span></div>`;
+    }
+
+    function render(e, isSuperuser) {
+      const m = e.member;
+      const avatar = m.photo_url
+        ? `<img src="${m.photo_url}" alt="${esc(m.full_name)}" class="detail-avatar" style="object-fit:cover;">`
+        : `<div class="detail-avatar" style="background:var(--oya-primary);color:#fff;">${esc((m.full_name || "").slice(0, 2).toUpperCase())}</div>`;
+
+      return `
+      <div class="detail-header" style="flex-wrap:wrap;gap:1rem;">
+        <div class="detail-title-section" style="flex-wrap:wrap;gap:1rem;">
+          ${avatar}
+          <div>
+            <h1 style="font-size:clamp(1.125rem, 3vw, 1.5rem)">${esc(m.full_name)}</h1>
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.25rem;flex-wrap:wrap;">
+              <span class="badge badge-accent">${esc(e.post)}</span>
+              ${e.is_current ? `<span class="badge badge-success">Active</span>` : `<span class="badge badge-secondary">Past</span>`}
+            </div>
+          </div>
+        </div>
+        ${isSuperuser ? `
+        <div class="page-header-actions">
+          <a href="executive-form.html?id=${e.id}" class="btn btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+          </a>
+        </div>` : ""}
+      </div>
+
+      <div class="dashboard-grid dashboard-grid-2" style="grid-template-columns:repeat(auto-fit, minmax(min(100%, 320px), 1fr));">
+        <div class="card">
+          <div class="card-header"><div class="card-header-title">Position Details</div></div>
+          <div class="card-body">
+            <div class="detail-meta-grid" style="grid-template-columns:repeat(auto-fit, minmax(min(100%, 180px), 1fr));">
+              ${metaItem("Position", esc(e.post))}
+              ${metaItem("Member", esc(m.full_name))}
+              ${metaItem("Serial Number", esc(m.serial_number))}
+              ${metaItem("Phone", esc(m.phone || "—"))}
+              ${metaItem("Start Date", fmtDate(e.start_date))}
+              ${metaItem("End Date", e.end_date ? fmtDate(e.end_date) : "Present")}
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-header-title">Photo</div></div>
+          <div class="card-body" style="text-align:center;padding:clamp(1rem, 4vw, 2rem);">
+            ${m.photo_url
+              ? `<img src="${m.photo_url}" alt="${esc(m.full_name)}" style="max-width:min(200px, 80vw);max-height:min(200px, 80vw);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);">`
+              : `<div style="color:var(--oya-text-muted);padding:2rem;">No photo uploaded</div>`}
+          </div>
+        </div>
+      </div>
+
+      <div class="alert" style="margin-top:1.5rem;background:var(--oya-warning-bg);color:var(--oya-warning);">
+        Election manifesto and handover records (from the original executive_detail page) aren't shown here yet — the
+        elections app isn't migrated. See the migration report.
+      </div>`;
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "executives", title: "Executive Profile" });
+      if (!user) return;
+      const id = new URLSearchParams(window.location.search).get("id");
+      const contentEl = document.getElementById("detailContent");
+      const loadingEl = document.getElementById("loadingState");
+      if (!id) { loadingEl.innerHTML = `<div class="alert alert-danger">No executive specified.</div>`; return; }
+      try {
+        const data = await window.OYA_API.apiFetch(`/executives/api/${id}/`);
+        contentEl.innerHTML = render(data.executive, !!user.is_superuser);
+        loadingEl.style.display = "none";
+        contentEl.style.display = "";
+      } catch (err) {
+        loadingEl.innerHTML = `<div class="alert alert-danger">Couldn't load this executive: ${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

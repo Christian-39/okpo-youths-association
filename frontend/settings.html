@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>System Settings | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:700px;">
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h1 style="font-size:clamp(1.125rem,3vw,1.5rem);">System Settings</h1>
+              <p style="font-size:0.875rem;color:var(--oya-text-muted);">Association branding, membership rules, and appearance</p>
+            </div>
+          </div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+          <div id="successBox" style="display:none;margin-bottom:1rem;" class="alert alert-success">Settings updated successfully.</div>
+
+          <form id="settingsForm">
+            <div class="card" style="margin-bottom:1.25rem;">
+              <div class="card-header"><div class="card-header-title">Association Info</div></div>
+              <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+                <div class="form-group">
+                  <label class="form-label" for="association_name">Association Name</label>
+                  <input type="text" id="association_name" name="association_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="motto">Motto</label>
+                  <input type="text" id="motto" name="motto" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="logo">Organization Logo</label>
+                  <input type="file" id="logo" name="logo" class="form-control" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp">
+                  <img id="logoPreview" style="display:none;margin-top:0.5rem;max-height:64px;">
+                  <span class="form-help" style="font-size:0.8125rem;color:var(--oya-text-muted);">PNG with transparent background recommended, max 2MB.</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="favicon">Browser Favicon</label>
+                  <input type="file" id="favicon" name="favicon" class="form-control" accept="image/x-icon,image/png,image/svg+xml">
+                  <span class="form-help" style="font-size:0.8125rem;color:var(--oya-text-muted);">32x32 or 64x64 ICO/PNG recommended, max 1MB.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:1.25rem;">
+              <div class="card-header"><div class="card-header-title">Financial &amp; Membership Rules</div></div>
+              <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+                <div class="form-group">
+                  <label class="form-label" for="yearly_dues">Yearly Dues (&#x20A6;)</label>
+                  <input type="number" id="yearly_dues" name="yearly_dues" class="form-control" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="minimum_age">Minimum Age</label>
+                  <input type="number" id="minimum_age" name="minimum_age" class="form-control" min="1" max="120" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="past_member_age">Past Member Age</label>
+                  <input type="number" id="past_member_age" name="past_member_age" class="form-control" min="1" max="120" required>
+                  <span class="form-help" style="font-size:0.8125rem;color:var(--oya-text-muted);">Must be greater than minimum age.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:1.25rem;">
+              <div class="card-header"><div class="card-header-title">Appearance</div></div>
+              <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+                <div class="form-group">
+                  <label class="form-label" for="primary_color">Primary Color</label>
+                  <input type="color" id="primary_color" name="primary_color" class="form-control" style="width:80px;padding:0.25rem;">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="accent_color">Accent Color</label>
+                  <input type="color" id="accent_color" name="accent_color" class="form-control" style="width:80px;padding:0.25rem;">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="theme_mode">Theme Mode</label>
+                  <select id="theme_mode" name="theme_mode" class="form-select"></select>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;">
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save Settings</button>
+            </div>
+          </form>
+
+          <div class="alert" style="margin-top:1.5rem;background:var(--oya-warning-bg);color:var(--oya-warning);">
+            The Users &amp; Access, Members Management, and Clan Management tabs from the original settings page
+            aren't ported here — those are separate concerns already covered by <a href="members.html">Members</a>.
+            See the migration report.
+          </div>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = [];
+      if (Array.isArray(errors)) lines.push(...errors);
+      else if (errors && typeof errors === "object") {
+        Object.entries(errors).forEach(([field, msgs]) => (Array.isArray(msgs) ? msgs : [msgs]).forEach((m) => lines.push(`${field}: ${m.message || m}`)));
+      }
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    document.getElementById("logo").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = document.getElementById("logoPreview");
+      img.src = URL.createObjectURL(file);
+      img.style.display = "";
+    });
+
+    document.getElementById("settingsForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+      document.getElementById("successBox").style.display = "none";
+
+      const formData = new FormData(document.getElementById("settingsForm"));
+      try {
+        await window.OYA_API.apiFetch("/settingsapp/api/settings/update/", { method: "POST", body: formData });
+        document.getElementById("successBox").style.display = "";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
+        else showErrors([err.message || "Something went wrong."]);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "settings", title: "Settings", requireExecutive: true });
+      if (!user) return;
+
+      try {
+        const { settings } = await window.OYA_API.apiFetch("/settingsapp/api/settings/");
+        document.getElementById("association_name").value = settings.association_name;
+        document.getElementById("motto").value = settings.motto;
+        document.getElementById("yearly_dues").value = settings.yearly_dues;
+        document.getElementById("minimum_age").value = settings.minimum_age;
+        document.getElementById("past_member_age").value = settings.past_member_age;
+        document.getElementById("primary_color").value = settings.primary_color;
+        document.getElementById("accent_color").value = settings.accent_color;
+        if (settings.logo_url) { document.getElementById("logoPreview").src = settings.logo_url; document.getElementById("logoPreview").style.display = ""; }
+
+        const themeSelect = document.getElementById("theme_mode");
+        settings.theme_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; themeSelect.appendChild(o); });
+        themeSelect.value = settings.theme_mode;
+      } catch (err) {
+        showErrors([err.message || "Couldn't load settings."]);
+      }
+    })();
+  </script>
+</body>
+</html>

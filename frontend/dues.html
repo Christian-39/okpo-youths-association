@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Dues Tracker | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <style>
+    .dues-cell { width: 34px; height: 28px; text-align: center; border-radius: 4px; font-size: 0.6875rem; font-weight: 600; }
+    .dues-cell.paid { background: var(--oya-success-bg, #dcfce7); color: var(--oya-success); }
+    .dues-cell.partial { background: var(--oya-warning-bg, #fef3c7); color: var(--oya-warning); }
+    .dues-cell.owed { background: var(--oya-danger-bg, #fee2e2); color: var(--oya-danger); }
+    .dues-cell.na { background: transparent; color: var(--oya-text-muted); opacity: 0.4; }
+    #duesTable th, #duesTable td { white-space: nowrap; text-align: center; }
+    #duesTable td:first-child, #duesTable th:first-child { text-align: left; position: sticky; left: 0; background: var(--oya-card-bg, #fff); z-index: 1; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h1 style="font-size:clamp(1.125rem, 3vw, 1.5rem);">Dues Tracker</h1>
+              <p style="font-size:clamp(0.75rem, 2vw, 0.875rem);">Member dues payment status by year</p>
+            </div>
+            <div class="page-header-actions" style="flex-wrap:wrap;gap:0.5rem;">
+              <a href="dues-debtors.html" class="btn btn-secondary">View Debtors</a>
+              <a href="prepaid.html" class="btn btn-secondary">Prepaid Dues</a>
+              <a href="dues-allocate.html" class="btn btn-primary" id="addBtn" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Record Payment
+              </a>
+            </div>
+          </div>
+
+          <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+            <div class="kpi-card accent-success"><div class="kpi-value" style="color:var(--oya-success);" id="kpiCollected">—</div><div class="kpi-label">Total Collected</div></div>
+            <div class="kpi-card accent-danger"><div class="kpi-value" style="color:var(--oya-danger);" id="kpiExpected">—</div><div class="kpi-label">Outstanding</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="kpiRate">—</div><div class="kpi-label">Collection Rate</div></div>
+            <div class="kpi-card accent-info"><div class="kpi-value" style="color:var(--oya-info);" id="kpiThisYear">—</div><div class="kpi-label" id="kpiThisYearLabel">This Year Paid</div></div>
+          </div>
+
+          <div class="card">
+            <div class="table-container" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+              <table class="data-table" id="duesTable">
+                <thead><tr id="theadRow"><th>Member</th></tr></thead>
+                <tbody id="tbody"><tr><td style="text-align:center;padding:2rem;color:var(--oya-text-muted);">Loading&hellip;</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:1rem;margin-top:1rem;font-size:0.75rem;color:var(--oya-text-muted);flex-wrap:wrap;">
+            <span><span class="dues-cell paid" style="display:inline-block;width:18px;height:14px;"></span> Paid</span>
+            <span><span class="dues-cell partial" style="display:inline-block;width:18px;height:14px;"></span> Partial</span>
+            <span><span class="dues-cell owed" style="display:inline-block;width:18px;height:14px;"></span> Owed</span>
+            <span><span class="dues-cell na" style="display:inline-block;width:18px;height:14px;"></span> N/A (before joining)</span>
+          </div>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+
+    function cellClass(status, amountPaid, yearlyDues) {
+      if (status === "N/A") return "na";
+      if (status === "OWED") return "owed";
+      if (Number(amountPaid) >= Number(yearlyDues)) return "paid";
+      if (Number(amountPaid) > 0) return "partial";
+      return "owed";
+    }
+    function cellLabel(status, amountPaid, yearlyDues) {
+      if (status === "N/A") return "—";
+      if (Number(amountPaid) >= Number(yearlyDues)) return "\u2713";
+      if (Number(amountPaid) > 0) return "~";
+      return "\u2717";
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "dues", title: "Dues Tracker" });
+      if (!user) return;
+      if (user.has_executive_access) document.getElementById("addBtn").style.display = "";
+
+      try {
+        const data = await window.OYA_API.apiFetch("/finance/api/dues/tracker/");
+        document.getElementById("kpiCollected").textContent = naira(data.total_dues_collected);
+        document.getElementById("kpiExpected").textContent = naira(data.total_dues_expected);
+        document.getElementById("kpiRate").textContent = `${data.collection_rate}%`;
+        document.getElementById("kpiThisYear").textContent = `${data.this_year_paid}/${data.this_year_expected}`;
+        document.getElementById("kpiThisYearLabel").textContent = `${data.current_year} Paid`;
+
+        const theadRow = document.getElementById("theadRow");
+        data.years.forEach((y) => { const th = document.createElement("th"); th.textContent = y; theadRow.appendChild(th); });
+        theadRow.insertAdjacentHTML("beforeend", `<th>Debt</th>`);
+
+        const tbody = document.getElementById("tbody");
+        if (!data.member_rows.length) {
+          tbody.innerHTML = `<tr><td colspan="${data.years.length + 2}" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No members found.</td></tr>`;
+        } else {
+          tbody.innerHTML = data.member_rows.map((row) => {
+            const cells = data.years.map((y) => {
+              const cell = row.years[y] || row.years[String(y)];
+              const cls = cellClass(cell.status, cell.amount_paid, data.yearly_dues);
+              const label = cellLabel(cell.status, cell.amount_paid, data.yearly_dues);
+              return `<td><span class="dues-cell ${cls}" title="${y}: ${naira(cell.amount_paid)}">${label}</span></td>`;
+            }).join("");
+            return `<tr>
+              <td><a href="member-dues-detail.html?id=${row.member.id}" class="cell-name" style="text-decoration:none;">${esc(row.member.full_name)}</a><div class="cell-muted">${esc(row.member.serial_number)}</div></td>
+              ${cells}
+              <td style="font-weight:600;color:${row.total_debt > 0 ? "var(--oya-danger)" : "var(--oya-success)"};">${naira(row.total_debt)}</td>
+            </tr>`;
+          }).join("");
+        }
+      } catch (err) {
+        document.getElementById("tbody").innerHTML = `<tr><td style="text-align:center;padding:2rem;color:var(--oya-danger);">Couldn't load: ${esc(err.message)}</td></tr>`;
+      }
+    })();
+  </script>
+</body>
+</html>

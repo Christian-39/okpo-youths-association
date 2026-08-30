@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Election Details | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+          <div id="loadingState" style="text-align:center;padding:3rem;color:var(--oya-text-muted);">Loading&hellip;</div>
+          <div id="detailContent" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function fmtDt(iso) { return iso ? new Date(iso).toLocaleString("en-US", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—"; }
+    function statusBadge(s) {
+      if (s === "UPCOMING") return `<span class="badge badge-info">Upcoming</span>`;
+      if (s === "ONGOING") return `<span class="badge badge-success">Ongoing</span>`;
+      if (s === "COMPLETED") return `<span class="badge badge-secondary">Completed</span>`;
+      if (s === "CANCELLED") return `<span class="badge badge-danger">Cancelled</span>`;
+      return "";
+    }
+    const id = new URLSearchParams(window.location.search).get("id");
+
+    function render(data) {
+      const e = data.election;
+      const byPost = {};
+      data.candidates.forEach((c) => { (byPost[c.post] = byPost[c.post] || []).push(c); });
+
+      return `
+      <div class="page-header" style="flex-wrap:wrap;gap:1rem;">
+        <div class="page-header-left">
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <h1 style="font-size:clamp(1.125rem,3vw,1.5rem);">${esc(e.title)}</h1>
+            ${statusBadge(e.status)}
+          </div>
+          <p style="font-size:0.875rem;color:var(--oya-text-muted);">${esc(e.description || "")}</p>
+          <p style="font-size:0.8125rem;color:var(--oya-text-muted);">${fmtDt(e.start_date)} &ndash; ${fmtDt(e.end_date)}</p>
+        </div>
+        ${data.can_manage ? `<div class="page-header-actions" style="flex-wrap:wrap;gap:0.5rem;">
+          <a href="election-form.html?id=${e.id}" class="btn btn-secondary">Edit Election</a>
+          <a href="candidate-form.html?election=${e.id}" class="btn btn-primary">Add Candidate</a>
+        </div>` : ""}
+      </div>
+
+      ${Object.keys(byPost).length ? Object.entries(byPost).map(([post, candidates]) => `
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header"><div class="card-header-title">${esc(post)}</div></div>
+        <div class="card-body">
+          <div class="dashboard-grid dashboard-grid-3">
+            ${candidates.sort((a, b) => b.votes - a.votes).map((c) => `
+            <div class="card" style="text-align:center;padding:1.25rem;">
+              <div class="avatar" style="width:64px;height:64px;margin:0 auto 0.75rem;overflow:hidden;background:var(--oya-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.25rem;border-radius:50%;">
+                ${c.photo_url ? `<img src="${c.photo_url}" style="width:100%;height:100%;object-fit:cover;">` : esc((c.member.full_name || "").slice(0, 2).toUpperCase())}
+              </div>
+              <div style="font-weight:600;">${esc(c.member.full_name)}</div>
+              <div class="cell-muted" style="font-size:0.8125rem;margin-bottom:0.5rem;">${esc(c.member.serial_number)}</div>
+              ${e.status === "COMPLETED" || data.can_manage ? `<div style="font-size:1.25rem;font-weight:700;color:var(--oya-primary);margin-bottom:0.5rem;">${c.votes} votes</div>` : ""}
+              ${c.manifesto ? `<p style="font-size:0.8125rem;color:var(--oya-text-muted);margin-bottom:0.75rem;">${esc(c.manifesto.slice(0, 100))}</p>` : ""}
+              ${e.status === "ONGOING" && !data.can_manage
+                ? (c.already_voted
+                    ? `<span class="badge badge-success">Voted</span>`
+                    : `<button class="btn btn-primary btn-sm" data-vote="${c.id}">Vote</button>`)
+                : ""}
+              ${data.can_manage ? `<a href="candidate-form.html?id=${c.id}" class="btn btn-sm btn-ghost">Edit</a>` : ""}
+            </div>`).join("")}
+          </div>
+        </div>
+      </div>`).join("") : `<div class="card"><div class="card-body" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No candidates yet.</div></div>`}`;
+    }
+
+    async function reload() {
+      const data = await window.OYA_API.apiFetch(`/elections/api/${id}/`);
+      document.getElementById("detailContent").innerHTML = render(data);
+      document.querySelectorAll("[data-vote]").forEach((btn) => btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        try {
+          await window.OYA_API.apiFetch(`/elections/api/candidates/${btn.dataset.vote}/vote/`, { method: "POST" });
+          reload();
+        } catch (err) {
+          alert(err.message);
+          btn.disabled = false;
+        }
+      }));
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "elections", title: "Election Details" });
+      if (!user) return;
+      if (!id) { document.getElementById("loadingState").innerHTML = `<div class="alert alert-danger">No election specified.</div>`; return; }
+      try {
+        await reload();
+        document.getElementById("loadingState").style.display = "none";
+        document.getElementById("detailContent").style.display = "";
+      } catch (err) {
+        document.getElementById("loadingState").innerHTML = `<div class="alert alert-danger">Couldn't load: ${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

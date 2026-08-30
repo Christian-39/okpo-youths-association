@@ -4,15 +4,14 @@ URL configuration for OYA project.
 
 from django.contrib import admin
 from django.urls import path, include
-from django.shortcuts import redirect
 from django.conf import settings
 from django.conf.urls.static import static
 from dashboard.views import global_search_ajax
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", lambda request: redirect("accounts:login"), name="home"),
-    path("", include("accounts.urls")),
+    
+    # API routes only — no root redirect to a missing template
     path("accounts/", include("accounts.urls")),
     path("members/", include("members.urls")),
     path("executives/", include("executives.urls")),
@@ -25,8 +24,8 @@ urlpatterns = [
     path("dashboard/", include("dashboard.urls")),
     path("settings/", include("settingsapp.urls")),
     path("project-donations/", include("project_donations.urls")),
-    
-    path('search/api/', global_search_ajax, name='global_search_ajax'),
+
+    path("search/api/", global_search_ajax, name="global_search_ajax"),
 ]
 
 if settings.DEBUG:

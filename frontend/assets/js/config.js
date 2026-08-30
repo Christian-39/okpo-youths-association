@@ -7,7 +7,7 @@
 window.OYA_CONFIG = {
   // Django backend origin. In dev this is usually Django's runserver.
   // In production, point this at your deployed Django domain.
-  API_BASE_URL: "http://127.0.0.1:8000",
+  API_BASE_URL: "okpo-youths-association.onrender.com",
 
   // Frontend routes, mirroring the Django url names they replace.
   // Keep in sync with oya/urls.py + each app's urls.py.

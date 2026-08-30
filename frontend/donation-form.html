@@ -196,7 +196,7 @@
       const formData = new FormData(document.getElementById("donationForm"));
       if (!document.getElementById("update_treasury").checked) formData.set("update_treasury", "");
       try {
-        const endpoint = isEdit ? `/project_donations/api/donations/${id}/update/` : "/project_donations/api/donations/create/";
+        const endpoint = isEdit ? `/project-donations/api/donations/${id}/update/` : "/project-donations/api/donations/create/";
         const data = await window.OYA_API.apiFetch(endpoint, { method: "POST", body: formData });
         window.location.href = "donations.html";
       } catch (err) {
@@ -211,7 +211,7 @@
       if (!user) return;
 
       try {
-        const meta = await window.OYA_API.apiFetch("/project_donations/api/donations/form-meta/");
+        const meta = await window.OYA_API.apiFetch("/project-donations/api/donations/form-meta/");
         const projSel = document.getElementById("project");
         meta.projects.forEach((p) => { const o = document.createElement("option"); o.value = p.id; o.textContent = p.title; projSel.appendChild(o); });
         const donorTypeSel = document.getElementById("donor_type");
@@ -234,7 +234,7 @@
 
         if (isEdit) {
           document.getElementById("formTitle").textContent = "Edit Donation";
-          const { donation } = await window.OYA_API.apiFetch(`/project_donations/api/donations/${id}/`);
+          const { donation } = await window.OYA_API.apiFetch(`/project-donations/api/donations/${id}/`);
           // Note: donation-detail only returns display-safe fields; for a
           // fuller pre-fill (exact member/outside_donor id, raw material
           // fields) this form relies on re-entering those specifics on edit.

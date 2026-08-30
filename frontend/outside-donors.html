@@ -111,7 +111,7 @@
       qs.set("page", state.page);
       const tbody = document.getElementById("tbody");
       try {
-        const data = await window.OYA_API.apiFetch(`/project_donations/api/outside-donors/list/?${qs.toString()}`);
+        const data = await window.OYA_API.apiFetch(`/project-donations/api/outside-donors/list/?${qs.toString()}`);
         document.getElementById("kpiTotal").textContent = data.stats.total;
         document.getElementById("kpiDonations").textContent = naira(data.stats.total_donations);
         tbody.innerHTML = data.donors.length ? data.donors.map(renderRow).join("") : `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No outside donors found.</td></tr>`;

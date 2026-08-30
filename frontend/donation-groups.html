@@ -140,7 +140,7 @@
       qs.set("page", state.page);
       const tbody = document.getElementById("tbody");
       try {
-        const data = await window.OYA_API.apiFetch(`/settingsapp/api/donation-groups/?${qs.toString()}`);
+        const data = await window.OYA_API.apiFetch(`/settings/api/donation-groups/?${qs.toString()}`);
         canManage = data.can_manage;
         if (canManage) document.getElementById("addBtn").style.display = "";
         document.getElementById("kpiTotal").textContent = data.stats.total;
@@ -149,7 +149,7 @@
         tbody.innerHTML = data.groups.length ? data.groups.map(renderRow).join("") : `<tr><td colspan="6" style="text-align:center;padding:3rem 1rem;color:var(--oya-text-muted);">No donation groups yet. ${canManage ? '<a href="donation-group-form.html">Create the first one</a>.' : ""}</td></tr>`;
         renderPagination(data.pagination);
         document.querySelectorAll("[data-toggle]").forEach((btn) => btn.addEventListener("click", async () => {
-          try { await window.OYA_API.apiFetch(`/settingsapp/api/donation-groups/${btn.dataset.toggle}/toggle-active/`, { method: "POST" }); load(); }
+          try { await window.OYA_API.apiFetch(`/settings/api/donation-groups/${btn.dataset.toggle}/toggle-active/`, { method: "POST" }); load(); }
           catch (err) { alert(`Couldn't update: ${err.message}`); }
         }));
       } catch (err) {

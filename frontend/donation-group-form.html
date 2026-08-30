@@ -107,7 +107,7 @@
       });
 
       try {
-        const endpoint = isEdit ? `/settingsapp/api/donation-groups/${id}/update/` : "/settingsapp/api/donation-groups/create/";
+        const endpoint = isEdit ? `/settings/api/donation-groups/${id}/update/` : "/settings/api/donation-groups/create/";
         const data = await window.OYA_API.apiFetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -132,7 +132,7 @@
       if (isEdit) {
         document.getElementById("formTitle").textContent = "Edit Donation Group";
         try {
-          const data = await window.OYA_API.apiFetch(`/settingsapp/api/donation-groups/${id}/`);
+          const data = await window.OYA_API.apiFetch(`/settings/api/donation-groups/${id}/`);
           const g = data.group;
           document.getElementById("name").value = g.name;
           document.getElementById("description").value = g.description || "";

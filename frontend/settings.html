@@ -153,7 +153,7 @@
 
       const formData = new FormData(document.getElementById("settingsForm"));
       try {
-        await window.OYA_API.apiFetch("/settingsapp/api/settings/update/", { method: "POST", body: formData });
+        await window.OYA_API.apiFetch("/settings/api/settings/update/", { method: "POST", body: formData });
         document.getElementById("successBox").style.display = "";
         window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (err) {
@@ -169,7 +169,7 @@
       if (!user) return;
 
       try {
-        const { settings } = await window.OYA_API.apiFetch("/settingsapp/api/settings/");
+        const { settings } = await window.OYA_API.apiFetch("/settings/api/settings/");
         document.getElementById("association_name").value = settings.association_name;
         document.getElementById("motto").value = settings.motto;
         document.getElementById("yearly_dues").value = settings.yearly_dues;

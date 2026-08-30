@@ -104,7 +104,7 @@
       if (!user) return;
       if (!id) { document.getElementById("loadingState").innerHTML = `<div class="alert alert-danger">No donor specified.</div>`; return; }
       try {
-        const data = await window.OYA_API.apiFetch(`/project_donations/api/outside-donors/${id}/`);
+        const data = await window.OYA_API.apiFetch(`/project-donations/api/outside-donors/${id}/`);
         document.getElementById("detailContent").innerHTML = render(data, !!user.has_executive_access);
         document.getElementById("loadingState").style.display = "none";
         document.getElementById("detailContent").style.display = "";

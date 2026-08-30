@@ -141,7 +141,7 @@
       qs.set("page", state.page);
       const tbody = document.getElementById("tbody");
       try {
-        const data = await window.OYA_API.apiFetch(`/project_donations/api/donations/list/?${qs.toString()}`);
+        const data = await window.OYA_API.apiFetch(`/project-donations/api/donations/list/?${qs.toString()}`);
         if (!choicesBuilt) {
           choicesBuilt = true;
           const projSel = document.getElementById("projectFilter");
@@ -157,7 +157,7 @@
         tbody.innerHTML = data.donations.length ? data.donations.map(renderRow).join("") : `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No donations recorded.</td></tr>`;
         renderPagination(data.pagination);
         document.querySelectorAll("[data-fulfill]").forEach((btn) => btn.addEventListener("click", async () => {
-          try { await window.OYA_API.apiFetch(`/project_donations/api/donations/${btn.dataset.fulfill}/fulfill/`, { method: "POST" }); load(); }
+          try { await window.OYA_API.apiFetch(`/project-donations/api/donations/${btn.dataset.fulfill}/fulfill/`, { method: "POST" }); load(); }
           catch (err) { alert(err.message); }
         }));
       } catch (err) {

@@ -40,3 +40,8 @@ gunicorn>=21.2.0
 # Backblaze B2 Storage
 django-storages>=1.14.0
 boto3>=1.34.0
+
+# Cross-Origin Resource Sharing (required — frontend and backend are
+# separate origins; without this, CORS_ALLOWED_ORIGINS in settings.py
+# has no effect because the middleware that reads it isn't installed)
+django-cors-headers>=4.3.0

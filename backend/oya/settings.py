@@ -52,12 +52,14 @@ LOCAL_APPS = [
 
 THIRD_PARTY_APPS = [
     "storages",
+    "corsheaders",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS + THIRD_PARTY_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -224,6 +226,13 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    # Frontend and backend are separate origins (e.g. a static site on
+    # Render + this API on Render) — cross-site cookies require
+    # SameSite=None, which browsers only honor when Secure=True (already
+    # set above). Without this, the session/CSRF cookie set on login is
+    # silently dropped by the browser on the next cross-origin request.
+    SESSION_COOKIE_SAMESITE = "None"
+    CSRF_COOKIE_SAMESITE = "None"
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True

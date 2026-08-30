@@ -117,7 +117,7 @@
       showErrors([]);
       const formData = new FormData(document.getElementById("donorForm"));
       try {
-        const endpoint = isEdit ? `/project_donations/api/outside-donors/${id}/update/` : "/project_donations/api/outside-donors/create/";
+        const endpoint = isEdit ? `/project-donations/api/outside-donors/${id}/update/` : "/project-donations/api/outside-donors/create/";
         const data = await window.OYA_API.apiFetch(endpoint, { method: "POST", body: formData });
         window.location.href = `outside-donor-detail.html?id=${data.donor.id}`;
       } catch (err) {
@@ -131,13 +131,13 @@
       const user = await window.OYA_SHELL.init({ page: "outside-donors", title: isEdit ? "Edit Outside Donor" : "Add Outside Donor", requireExecutive: true });
       if (!user) return;
       try {
-        const meta = await window.OYA_API.apiFetch("/project_donations/api/outside-donors/form-meta/");
+        const meta = await window.OYA_API.apiFetch("/project-donations/api/outside-donors/form-meta/");
         const sel = document.getElementById("invited_by");
         meta.members.forEach((m) => { const o = document.createElement("option"); o.value = m.id; o.textContent = `${m.full_name} (${m.serial_number})`; sel.appendChild(o); });
 
         if (isEdit) {
           document.getElementById("formTitle").textContent = "Edit Outside Donor";
-          const { donor } = await window.OYA_API.apiFetch(`/project_donations/api/outside-donors/${id}/`);
+          const { donor } = await window.OYA_API.apiFetch(`/project-donations/api/outside-donors/${id}/`);
           document.getElementById("full_name").value = donor.full_name;
           document.getElementById("phone_number").value = donor.phone_number || "";
           document.getElementById("address").value = donor.address || "";

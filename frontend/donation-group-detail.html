@@ -96,13 +96,13 @@
     }
 
     async function reload() {
-      const data = await window.OYA_API.apiFetch(`/settingsapp/api/donation-groups/${id}/`);
+      const data = await window.OYA_API.apiFetch(`/settings/api/donation-groups/${id}/`);
       document.getElementById("detailContent").innerHTML = render(data);
       if (data.can_manage) wireAddMember();
       document.querySelectorAll("[data-remove]").forEach((btn) => btn.addEventListener("click", async () => {
         if (!confirm("Remove this member from the group?")) return;
         try {
-          await window.OYA_API.apiFetch(`/settingsapp/api/donation-groups/${id}/members/${btn.dataset.remove}/remove/`, { method: "DELETE" });
+          await window.OYA_API.apiFetch(`/settings/api/donation-groups/${id}/members/${btn.dataset.remove}/remove/`, { method: "DELETE" });
           reload();
         } catch (err) { alert(`Couldn't remove: ${err.message}`); }
       }));
@@ -126,7 +126,7 @@
           box.style.display = "";
           box.querySelectorAll("[data-id]").forEach((btn) => btn.addEventListener("click", async () => {
             try {
-              await window.OYA_API.apiFetch(`/settingsapp/api/donation-groups/${id}/members/add/`, {
+              await window.OYA_API.apiFetch(`/settings/api/donation-groups/${id}/members/add/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `member=${encodeURIComponent(btn.dataset.id)}`,

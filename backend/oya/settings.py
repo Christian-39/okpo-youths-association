@@ -149,6 +149,35 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
+
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in config(
+        "CORS_ALLOWED_ORIGINS",
+        default="",
+    ).split(",")
+    if origin.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in config(
+        "CSRF_TRUSTED_ORIGINS",
+        default="",
+    ).split(",")
+    if origin.strip()
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in ALLOWED_HOSTS
+    if host.strip()
+]
+
+
 # ============================================
 # BACKBLAZE B2 / S3 COMPATIBLE STORAGE
 # ============================================

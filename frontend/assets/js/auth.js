@@ -21,10 +21,13 @@
   }
 
   async function login(serialNumber, pin) {
-    return apiFetch("/accounts/api/login/", {
-      method: "POST",
-      body: JSON.stringify({ serial_number: serialNumber, pin }),
-    });
+      // Fetch the CSRF cookie first so the POST is accepted
+      await ensureCsrfCookie();
+
+      return apiFetch("/accounts/api/login/", {
+        method: "POST",
+        body: JSON.stringify({ serial_number: serialNumber, pin }),
+      });
   }
 
   async function logout() {

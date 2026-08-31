@@ -7,7 +7,7 @@ from . import views
 app_name = "auditlogs"
 
 urlpatterns = [
-    path("", views.auditlog_list, name="auditlog_list"),
-    path("<int:pk>/detail/", views.auditlog_detail, name="detail"),
-    path("export/", views.auditlog_export, name="export"),
+    path("api/", views.auditlog_list, name="auditlog_list"),
+    path("api/<int:pk>/detail/", views.auditlog_detail, name="detail"),
+    path("api/export/", views.auditlog_export, name="export"),
 ]

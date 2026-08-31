@@ -152,11 +152,12 @@ STATICFILES_DIRS = [
 ]
 
 
+# CORS & CSRF origins — add common local dev servers by default
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in config(
         "CORS_ALLOWED_ORIGINS",
-        default="",
+        default="http://localhost:3000,http://localhost:5500,http://localhost:8000,http://127.0.0.1:8000",
     ).split(",")
     if origin.strip()
 ]
@@ -165,19 +166,24 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in config(
         "CSRF_TRUSTED_ORIGINS",
-        default="",
+        default="http://localhost:3000,http://localhost:5500,http://localhost:8000,http://127.0.0.1:8000",
     ).split(",")
     if origin.strip()
 ]
 
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False
-
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in ALLOWED_HOSTS
-    if host.strip()
-]
+# In DEBUG be permissive — CORS headers will allow your local frontend
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+    # Still ensure CSRF trusted origins cover your dev setup
+    _dev_origins = [
+        "http://localhost:3000",
+        "http://localhost:5500",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
+    for _o in _dev_origins:
+        if _o not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_o)
 
 
 # ============================================

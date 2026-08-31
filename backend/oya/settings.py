@@ -5,6 +5,7 @@ Okpo Youths Association Management System
 """
 
 import os
+import sys
 from decouple import config
 from pathlib import Path
 
@@ -20,7 +21,23 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DJANGO_DEBUG", default="True").lower() == "true"
 
-ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in config("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
+    if host.strip()
+]
+
+# ─── LOCAL DEV SERVER OVERRIDE ───
+# When running `python manage.py runserver` locally, force DEBUG mode
+# so SECURE_SSL_REDIRECT, HSTS, and production CORS locks don't break
+# the connection from your Live Server frontend (e.g. port 5501).
+RUNNING_DEV_SERVER = len(sys.argv) > 1 and sys.argv[1] == "runserver"
+if RUNNING_DEV_SERVER:
+    DEBUG = True
+    # Ensure local hosts are always allowed when using runserver
+    for _dev_host in ("localhost", "127.0.0.1", "0.0.0.0"):
+        if _dev_host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_dev_host)
 
 # Application definition
 DJANGO_APPS = [
@@ -171,6 +188,13 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
+# REQUIRED because api.js uses credentials: "include" on every fetch
+CORS_ALLOW_CREDENTIALS = True
+
+# Allow JS to read the csrftoken cookie so it can send the X-CSRFToken header
+CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_HTTPONLY = True
+
 # In DEBUG be permissive — CORS headers will allow your local frontend
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
@@ -178,7 +202,10 @@ if DEBUG:
     _dev_origins = [
         "http://localhost:3000",
         "http://localhost:5500",
+        "http://localhost:5501",
         "http://localhost:8000",
+        "http://127.0.0.1:5500",
+        "http://127.0.0.1:5501",
         "http://127.0.0.1:8000",
     ]
     for _o in _dev_origins:
@@ -200,10 +227,10 @@ STORAGES = {
     },
 }
 
-# B2 Credentials (from Railway env vars)
-AWS_ACCESS_KEY_ID = config("B2_KEY_ID")
-AWS_SECRET_ACCESS_KEY = config("B2_APPLICATION_KEY")
-AWS_STORAGE_BUCKET_NAME = config("B2_BUCKET_NAME")
+# B2 Credentials (from Railway env vars) — defaults allow local dev without them
+AWS_ACCESS_KEY_ID = config("B2_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = config("B2_APPLICATION_KEY", default="")
+AWS_STORAGE_BUCKET_NAME = config("B2_BUCKET_NAME", default="")
 AWS_S3_REGION_NAME = config("B2_BUCKET_REGION", default="us-east-005")
 AWS_S3_ENDPOINT_URL = config("B2_ENDPOINT_URL", default="https://s3.us-east-005.backblazeb2.com")
 
@@ -214,8 +241,8 @@ AWS_QUERYSTRING_AUTH = False
 AWS_DEFAULT_ACL = "public-read"
 AWS_S3_FILE_OVERWRITE = True
 
-# Media URL
-MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.backblazeb2.com/"
+# Media URL (only relevant when bucket name is configured)
+MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.backblazeb2.com/" if AWS_STORAGE_BUCKET_NAME else "/media/"
 
 # ============================================
 # WHITENOISE (Production)

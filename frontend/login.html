@@ -44,6 +44,8 @@
             padding: 1rem;
             -webkit-font-smoothing: antialiased;
         }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .alert-container { position: fixed; top: 1rem; left: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
         .alert { background: var(--oya-white); border-radius: var(--oya-radius); padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; box-shadow: var(--oya-shadow-lg); animation: slideDown 0.3s ease-out; font-size: 0.875rem; font-weight: 500; }
         .alert-success { border-left: 4px solid var(--oya-success); color: var(--oya-success); }

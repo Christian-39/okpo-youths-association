@@ -30,6 +30,7 @@
     }
   }
 
+  /** Returns the current user object, or null if not authenticated. */
   async function getCurrentUser() {
     try {
       return await apiFetch("/accounts/api/me/");
@@ -38,6 +39,10 @@
     }
   }
 
+  /**
+   * Call at the top of every protected page. Redirects to login if the
+   * session isn't valid, otherwise resolves with the current user.
+   */
   async function requireAuth() {
     const user = await getCurrentUser();
     if (!user) {

@@ -7,7 +7,6 @@
 
   const BASE = window.OYA_CONFIG.API_BASE_URL;
 
-  /** Read a cookie value by name (fallback for same-origin setups). */
   function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -17,13 +16,8 @@
 
   const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
 
-  /** Cached CSRF token (populated from JSON endpoint). */
   let _cachedCsrf = null;
 
-  /**
-   * Fetch the CSRF token from the backend JSON endpoint.
-   * Falls back to document.cookie for same-origin deployments.
-   */
   async function fetchCsrfToken() {
     if (_cachedCsrf) return _cachedCsrf;
 
@@ -42,7 +36,6 @@
     return _cachedCsrf;
   }
 
-  /** Clear cached CSRF (call after logout). */
   function clearCsrfCache() {
     _cachedCsrf = null;
   }
@@ -54,6 +47,12 @@
       this.status = status;
       this.data = data;
     }
+  }
+
+  /** True if the current page is the login page. */
+  function isLoginPage() {
+    return window.location.pathname.endsWith("login.html") ||
+           window.location.pathname.endsWith("/login");
   }
 
   async function apiFetch(endpoint, options = {}) {
@@ -82,14 +81,23 @@
       throw new ApiError("Network error — could not reach the server.", 0, null);
     }
 
+    // 401 / 403 handling
     if (response.status === 401 || response.status === 403) {
       let data = null;
       try { data = await response.json(); } catch (_) {}
-      if (response.status === 401) {
+
+      // Don't redirect if we're already on the login page — let the caller
+      // handle the error (e.g. show "Invalid credentials" on the form).
+      if (response.status === 401 && !isLoginPage()) {
         window.location.href = window.OYA_CONFIG.ROUTES.login;
         return;
       }
-      throw new ApiError((data && data.detail) || "Permission denied.", response.status, data);
+
+      throw new ApiError(
+        (data && data.detail) || (data && data.error) || "Permission denied.",
+        response.status,
+        data
+      );
     }
 
     if (response.status === 204) return null;

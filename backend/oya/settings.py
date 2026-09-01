@@ -97,51 +97,21 @@ ASGI_APPLICATION = "oya.asgi.application"
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 # Database
-#
-# render.yaml provisions a managed Postgres database and injects its
-# connection string as DATABASE_URL — but nothing in this file was
-# reading that variable, so in production Django was silently falling
-# back to the DB_* vars below (or SQLite, if those aren't set either).
-# dj_database_url parses DATABASE_URL when present; the DB_* vars
-# remain as an explicit fallback for any environment that sets them
-# individually instead (e.g. a MySQL host configured by hand).
-import dj_database_url
-
-DATABASE_URL = config("DATABASE_URL", default="")
-
-if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=60,
-            conn_health_checks=True,
-        )
-    }
-    # The STRICT_TRANS_TABLES init_command is MySQL-specific — only
-    # apply it if the resolved engine is actually MySQL, so this
-    # doesn't break a Postgres DATABASE_URL (Postgres has no concept
-    # of sql_mode and would error on this OPTIONS key).
-    if "mysql" in DATABASES["default"]["ENGINE"]:
-        DATABASES["default"].setdefault("OPTIONS", {})
-        DATABASES["default"]["OPTIONS"]["init_command"] = "SET sql_mode='STRICT_TRANS_TABLES'"
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": config("DB_ENGINE", default="django.db.backends.sqlite3"),
-            "NAME": config("DB_NAME", default=BASE_DIR / "db.sqlite3"),
-            "USER": config("DB_USER", default=""),
-            "PASSWORD": config("DB_PASSWORD", default=""),
-            "HOST": config("DB_HOST", default=""),
-            "PORT": config("DB_PORT", default=""),
-            "CONN_MAX_AGE": 60,
-            "CONN_HEALTH_CHECKS": True,
-            "OPTIONS": (
-                {"init_command": "SET sql_mode='STRICT_TRANS_TABLES'"}
-                if config("DB_ENGINE", default="django.db.backends.sqlite3") == "django.db.backends.mysql"
-                else {}
-            ),
+DATABASES = {
+    "default": {
+        "ENGINE": config("DB_ENGINE", default="django.db.backends.sqlite3"),
+        "NAME": config("DB_NAME", default=BASE_DIR / "db.sqlite3"),
+        "USER": config("DB_USER", default=""),
+        "PASSWORD": config("DB_PASSWORD", default=""),
+        "HOST": config("DB_HOST", default=""),
+        "PORT": config("DB_PORT", default=""),
+        "CONN_MAX_AGE": 60,
+        "CONN_HEALTH_CHECKS": True,
+        "OPTIONS": {
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
         }
     }
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -277,6 +247,22 @@ if not DEBUG:
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
     }
 
+# Security settings for production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Frontend and backend are separate origins (e.g. a static site on
+    # Render + this API on Render) — cross-site cookies require
+    # SameSite=None, which browsers only honor when Secure=True (already
+    # set above). Without this, the session/CSRF cookie set on login is
+    # silently dropped by the browser on the next cross-origin request.
+    SESSION_COOKIE_SAMESITE = "None"
+    CSRF_COOKIE_SAMESITE = "None"
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

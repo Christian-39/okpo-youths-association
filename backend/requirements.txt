@@ -5,6 +5,12 @@ django>=5.2,<6.0
 
 # Database
 mysqlclient>=2.2.0
+dj-database-url>=2.1.0
+# render.yaml provisions a Render-managed Postgres database via
+# DATABASE_URL — psycopg2 is required to actually connect to it.
+# (mysqlclient above is kept for any environment that instead points
+# DB_* vars at a separate MySQL host.)
+psycopg2-binary>=2.9.9
 
 # Authentication & Security
 argon2-cffi>=23.1.0

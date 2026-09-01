@@ -41,7 +41,15 @@ YEARLY_DUES = 5000
 
 @login_required
 def global_search_ajax(request):
-    """AJAX endpoint for topbar global search."""
+    """
+    AJAX endpoint for topbar global search.
+
+    Returns `type` + `id` for each result so the standalone frontend can
+    build its own page URLs (member-detail.html?id=, case-detail.html?id=,
+    etc.) — previously this returned Django's own reverse()'d template
+    URLs (e.g. "/members/42/"), which don't exist as pages on the
+    separate frontend and would 404/land on the wrong app entirely.
+    """
     query = request.GET.get("q", "").strip()
     if len(query) < 2:
         return JsonResponse({"results": [], "view_all_url": None})
@@ -56,14 +64,10 @@ def global_search_ajax(request):
         | Q(phone__icontains=q)
         | Q(state_or_abroad__icontains=q)
     )[:5]:
-        try:
-            url = reverse("members:member_detail", kwargs={"pk": m.pk})
-        except NoReverseMatch:
-            url = "#"
         results.append({
             "type": "member",
+            "id": m.pk,
             "name": f"{m.full_name} ({m.serial_number})",
-            "url": url,
         })
 
     # ─── Users ───
@@ -72,14 +76,10 @@ def global_search_ajax(request):
         | Q(serial_number__icontains=q)
         | Q(phone__icontains=q)
     )[:5]:
-        try:
-            url = reverse("accounts:profile")
-        except NoReverseMatch:
-            url = "#"
         results.append({
             "type": "user",
+            "id": u.pk,
             "name": u.full_name or u.serial_number,
-            "url": url,
         })
 
     # ─── Case Files ───
@@ -88,14 +88,10 @@ def global_search_ajax(request):
         | Q(case_number__icontains=q)
         | Q(respondent__full_name__icontains=q)
     )[:5]:
-        try:
-            url = reverse("operations:case_detail", kwargs={"pk": c.pk})
-        except NoReverseMatch:
-            url = "#"
         results.append({
             "type": "case",
+            "id": c.pk,
             "name": f"{c.case_number or 'Case'}: {c.title}",
-            "url": url,
         })
 
     # ─── Projects ───
@@ -104,14 +100,10 @@ def global_search_ajax(request):
         for p in Project.objects.filter(
             Q(title__icontains=q) | Q(description__icontains=q)
         )[:5]:
-            try:
-                url = reverse("projects:project_detail", kwargs={"pk": p.pk})
-            except NoReverseMatch:
-                url = "#"
             results.append({
                 "type": "project",
+                "id": p.pk,
                 "name": p.title,
-                "url": url,
             })
     except Exception:
         pass
@@ -122,14 +114,10 @@ def global_search_ajax(request):
         for d in OutsideDonor.objects.filter(
             Q(full_name__icontains=q) | Q(phone_number__icontains=q)
         )[:5]:
-            try:
-                url = reverse("project_donations:outside_donor_detail", kwargs={"pk": d.pk})
-            except NoReverseMatch:
-                url = "#"
             results.append({
-                "type": "member",
+                "type": "outside_donor",
+                "id": d.pk,
                 "name": f"{d.full_name} (Outside Donor)",
-                "url": url,
             })
     except Exception:
         pass

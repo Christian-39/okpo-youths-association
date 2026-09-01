@@ -3,26 +3,21 @@ URL patterns for elections app.
 """
 from django.urls import path
 from . import views
+from . import api
 
 app_name = "elections"
 
 urlpatterns = [
-    path("api/", views.election_list, name="election_list"),
-    path("api/create/", views.election_create, name="election_create"),
-    path("api/<int:pk>/", views.election_detail, name="election_detail"),
-    path("api/<int:pk>/update/", views.election_update, name="election_update"),
-    path("api/candidates/create/", views.candidate_create, name="candidate_create"),
-    path("api/candidates/<int:pk>/update/", views.candidate_update, name="candidate_update"),
-    path("api/candidate/<int:pk>/vote/", views.cast_vote, name="cast_vote"),
-    
-    # Handover Ledger URLs
-    path("api/handovers/", views.handover_list, name="handover_list"),
-    path("api/handovers/create/", views.handover_create, name="handover_create"),
-    path("api/handovers/<int:pk>/", views.handover_detail, name="handover_detail"),
-    path("api/handovers/<int:pk>/update/", views.handover_update, name="handover_update"),
-    path("api/handovers/<int:pk>/delete/", views.handover_delete, name="handover_delete"),
+    path("candidate/<int:pk>/vote/", views.cast_vote, name="cast_vote"),
 
-    # Executive Handover Report URLs
-    path("api/administrations/", views.administration_list, name="administration_list"),
-    path("api/administrations/<str:key>/", views.administration_report, name="administration_report"),
+    # Standalone-frontend JSON API
+    path("api/list/", api.election_list_api, name="election_list_api"),
+    path("api/create/", api.election_create_api, name="election_create_api"),
+    path("api/<int:pk>/", api.election_detail_api, name="election_detail_api"),
+    path("api/<int:pk>/update/", api.election_update_api, name="election_update_api"),
+    path("api/candidates/form-meta/", api.candidate_form_meta_api, name="candidate_form_meta_api"),
+    path("api/candidates/create/", api.candidate_create_api, name="candidate_create_api"),
+    path("api/candidates/<int:pk>/", api.candidate_detail_api, name="candidate_detail_api"),
+    path("api/candidates/<int:pk>/update/", api.candidate_update_api, name="candidate_update_api"),
+    path("api/candidates/<int:pk>/vote/", api.cast_vote_api, name="cast_vote_api"),
 ]

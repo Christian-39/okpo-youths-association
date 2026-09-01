@@ -1,19 +1,27 @@
 /**
  * OYA Frontend — Central Configuration
- * Auto-detects local vs production backend. No manual switching needed.
  */
+
 (function () {
-  const hostname = location.hostname;
-  const isLocalhost = ["localhost", "127.0.0.1"].includes(hostname);
-  const protocol = location.protocol;          // http: or https:
+  // ── Environment Detection ─────────────────────────────
+  const hostname = window.location.hostname;
+  const isLocal = (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.startsWith("192.168.") ||
+    hostname.startsWith("10.") ||
+    // optional: any other local dev host you use
+    hostname.endsWith(".local")
+  );
+
+  // ── API Base URL ──────────────────────────────────────
+
+  const API_BASE_URL = isLocal
+    ? "http://localhost:8000"
+    : "https://okpo-youths-association.onrender.com";
 
   window.OYA_CONFIG = {
-    // Use the SAME hostname as the page so cookies are same-site
-    API_BASE_URL: isLocalhost
-      ? `${protocol}//${hostname}:8000`
-      : "https://okpo-youths-association.onrender.com",
-
-    API_PREFIX: "/accounts/api",
+    API_BASE_URL,
 
     ROUTES: {
       login: "login.html",
@@ -23,5 +31,8 @@
       memberForm: "member-form.html",
       profile: "profile.html",
     },
+
+    // Optional: expose the flag so other scripts can branch if needed
+    IS_LOCAL: isLocal,
   };
 })();

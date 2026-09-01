@@ -170,65 +170,29 @@
             });
         }
 
-        function clearErrors() {
-            document.getElementById('formErrors').innerHTML = '';
-            document.getElementById('formErrors').style.display = 'none';
-        }
-
         (async function init() {
-            try {
-                const existing = await window.OYA_AUTH.getCurrentUser();
-                if (existing) {
-                    console.log('[Login] Already authenticated, redirecting...');
-                    window.location.replace(window.OYA_CONFIG.ROUTES.dashboard);
-                    return;
-                }
-                await window.OYA_AUTH.ensureCsrfCookie();
-                console.log('[Login] CSRF cookie ready');
-            } catch (err) {
-                console.error('[Login] Init error:', err);
+            // If already logged in, skip straight to the dashboard.
+            const existing = await window.OYA_AUTH.getCurrentUser();
+            if (existing) {
+                window.location.href = window.OYA_CONFIG.ROUTES.dashboard;
+                return;
             }
+            await window.OYA_AUTH.ensureCsrfCookie();
         })();
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            clearErrors();
-
             const btn = document.getElementById('loginBtn');
-            const serial = document.getElementById('serial_number').value.trim().toUpperCase();
+            const serial = document.getElementById('serial_number').value.trim();
             const pin = document.getElementById('pin').value.trim();
-
-            if (!serial || !pin) {
-                showFieldErrors(['Serial number and PIN are required.']);
-                return;
-            }
 
             btn.disabled = true;
             try {
-                console.log('[Login] Attempting login...');
                 const data = await window.OYA_AUTH.login(serial, pin);
-                console.log('[Login] Success:', data);
-
-                const name = (data && data.full_name) || serial;
-                showAlert(`Welcome, ${name}!`, 'success');
-
-                const dest = window.OYA_CONFIG.ROUTES.dashboard;
-                if (!dest) {
-                    console.error('[Login] ROUTES.dashboard is undefined! Check config.js');
-                    showFieldErrors(['Redirect failed: dashboard route not configured.']);
-                    btn.disabled = false;
-                    return;
-                }
-
-                // Small delay so the toast is visible
-                setTimeout(() => {
-                    console.log('[Login] Redirecting to:', dest);
-                    window.location.replace(dest);
-                }, 600);
-
+                showAlert(`Welcome, ${data.full_name || serial}!`, 'success');
+                setTimeout(() => { window.location.href = window.OYA_CONFIG.ROUTES.dashboard; }, 400);
             } catch (err) {
-                console.error('[Login] Failed:', err);
-                const messages = (err && err.data && err.data.errors) || [err.message || 'Invalid serial number or PIN.'];
+                const messages = (err.data && err.data.errors) || [err.message || 'Invalid serial number or PIN.'];
                 showFieldErrors(messages);
                 btn.disabled = false;
             }

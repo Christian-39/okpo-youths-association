@@ -99,7 +99,14 @@
         document.getElementById("kpiIncome").textContent = naira(data.total_income);
         document.getElementById("kpiExpenses").textContent = naira(data.total_expenses);
         document.getElementById("kpiMonth").textContent = naira(data.this_month_expenses);
-      } catch (_) { /* kpis stay blank on failure */ }
+      } catch (err) {
+        // These are financial figures — a silent blank "—" could be
+        // mistaken for an actual zero balance, so this failure must be
+        // visible, not hidden.
+        console.error("OYA: couldn't load finance KPIs:", err);
+        document.getElementById("kpiRow").insertAdjacentHTML("afterend",
+          `<div class="alert alert-danger" style="margin-bottom:1.5rem;">Couldn't load the figures above — they are not reliable right now. (${err.message || "network error"})</div>`);
+      }
     })();
   </script>
 </body>

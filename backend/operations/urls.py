@@ -3,23 +3,32 @@ URL patterns for operations app.
 """
 from django.urls import path
 from . import views
+from . import api
 
 app_name = "operations"
 
 urlpatterns = [
-    path("api/taskforce/", views.taskforce_list, name="taskforce_list"),
-    path("api/taskforce/create/", views.taskforce_create, name="taskforce_create"),
-    path("api/taskforce/<int:pk>/update/", views.taskforce_update, name="taskforce_update"),
-    path("api/taskforce/<int:pk>/remove/", views.taskforce_remove, name="taskforce_remove"),
-    path("api/motorcycles/", views.motorcycle_list, name="motorcycle_list"),
-    path("api/motorcycles/create/", views.motorcycle_create, name="motorcycle_create"),
-    path("api/motorcycles/<int:pk>/update/", views.motorcycle_update, name="motorcycle_update"),
-    path("api/motorcycles/<int:pk>/delete/", views.motorcycle_delete, name="motorcycle_delete"),
-    path("api/cases/", views.case_list, name="case_list"),
-    path("api/cases/create/", views.case_create, name="case_create"),
-    path("api/cases/<int:pk>/", views.case_detail, name="case_detail"),
-    path("api/cases/<int:pk>/resolve/", views.case_resolve, name="case_resolve"),
-    path("api/cases/<int:pk>/edit/", views.case_update, name="case_update"),
-    path("api/cases/<int:pk>/delete/", views.case_delete, name="case_delete"),
+    # Standalone-frontend JSON API
+    path("api/taskforce/list/", api.taskforce_list_api, name="taskforce_list_api"),
+    path("api/taskforce/form-meta/", api.taskforce_form_meta_api, name="taskforce_form_meta_api"),
+    path("api/taskforce/create/", api.taskforce_create_api, name="taskforce_create_api"),
+    path("api/taskforce/<int:pk>/", api.taskforce_detail_api, name="taskforce_detail_api"),
+    path("api/taskforce/<int:pk>/update/", api.taskforce_update_api, name="taskforce_update_api"),
+    path("api/taskforce/<int:pk>/remove/", api.taskforce_remove_api, name="taskforce_remove_api"),
 
+    path("api/motorcycles/list/", api.motorcycle_list_api, name="motorcycle_list_api"),
+    path("api/motorcycles/form-meta/", api.motorcycle_form_meta_api, name="motorcycle_form_meta_api"),
+    path("api/motorcycles/create/", api.motorcycle_create_api, name="motorcycle_create_api"),
+    path("api/motorcycles/<int:pk>/", api.motorcycle_detail_api, name="motorcycle_detail_api"),
+    path("api/motorcycles/<int:pk>/update/", api.motorcycle_update_api, name="motorcycle_update_api"),
+    path("api/motorcycles/<int:pk>/delete/", api.motorcycle_delete_api, name="motorcycle_delete_api"),
+
+    path("api/cases/list/", api.case_list_api, name="case_list_api"),
+    path("api/cases/form-meta/", api.case_form_meta_api, name="case_form_meta_api"),
+    path("api/cases/<int:pk>/form-meta/", api.case_form_meta_api, name="case_form_meta_edit_api"),
+    path("api/cases/create/", api.case_create_api, name="case_create_api"),
+    path("api/cases/<int:pk>/", api.case_detail_api, name="case_detail_api"),
+    path("api/cases/<int:pk>/update/", api.case_update_api, name="case_update_api"),
+    path("api/cases/<int:pk>/resolve/", api.case_resolve_api, name="case_resolve_api"),
+    path("api/cases/<int:pk>/delete/", api.case_delete_api, name="case_delete_api"),
 ]

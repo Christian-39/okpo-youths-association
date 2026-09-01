@@ -179,7 +179,10 @@
       try {
         const expenseData = await window.OYA_API.apiFetch("/finance/api/expenses/?page=1");
         document.getElementById("treasuryBalance").textContent = naira(expenseData.treasury_balance);
-      } catch (_) { /* non-fatal */ }
+      } catch (err) {
+        console.warn("OYA: couldn't load treasury balance:", err);
+        document.getElementById("treasuryBalance").textContent = "unavailable";
+      }
     })();
   </script>
 </body>

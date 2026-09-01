@@ -126,7 +126,11 @@
           box.innerHTML = `<strong>Outstanding years:</strong> ` + data.outstanding.map((o) => `${o.year} (${naira(o.remaining_balance)} owed)`).join(", ");
         }
         box.style.display = "";
-      } catch (_) { box.style.display = "none"; }
+      } catch (err) {
+        console.error("OYA: couldn't load outstanding dues preview:", err);
+        box.innerHTML = `<span style="color:var(--oya-danger);">Couldn't load this member's outstanding dues — you can still enter an amount, but verify the years manually.</span>`;
+        box.style.display = "";
+      }
     }
 
     document.getElementById("allocateForm").addEventListener("submit", async (e) => {

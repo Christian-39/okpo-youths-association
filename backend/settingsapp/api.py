@@ -61,7 +61,7 @@ def _serialize_settings(s):
 
 @require_http_methods(["GET"])
 def system_settings_api(request):
-    """GET /settingsapp/api/settings/"""
+    """GET /settings/api/settings/"""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -72,7 +72,7 @@ def system_settings_api(request):
 
 @require_http_methods(["POST"])
 def system_settings_update_api(request):
-    """POST /settingsapp/api/settings/update/ (multipart/form-data — logo/favicon uploads)"""
+    """POST /settings/api/settings/update/ (multipart/form-data — logo/favicon uploads)"""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -114,7 +114,7 @@ def _serialize_group(g, with_counts=True):
 
 @require_http_methods(["GET"])
 def donation_group_list_api(request):
-    """GET /settingsapp/api/donation-groups/?search=&status=&page="""
+    """GET /settings/api/donation-groups/?search=&status=&page="""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -156,7 +156,7 @@ def donation_group_list_api(request):
 
 @require_http_methods(["GET"])
 def donation_group_detail_api(request, pk):
-    """GET /settingsapp/api/donation-groups/<pk>/?member_search=&mpage="""
+    """GET /settings/api/donation-groups/<pk>/?member_search=&mpage="""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -220,7 +220,7 @@ def donation_group_detail_api(request, pk):
 
 @require_http_methods(["POST"])
 def donation_group_create_api(request):
-    """POST /settingsapp/api/donation-groups/create/ (JSON body)"""
+    """POST /settings/api/donation-groups/create/ (JSON body)"""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -244,7 +244,7 @@ def donation_group_create_api(request):
 
 @require_http_methods(["POST"])
 def donation_group_update_api(request, pk):
-    """POST /settingsapp/api/donation-groups/<pk>/update/ (JSON body)"""
+    """POST /settings/api/donation-groups/<pk>/update/ (JSON body)"""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -266,7 +266,7 @@ def donation_group_update_api(request, pk):
 
 @require_http_methods(["DELETE"])
 def donation_group_delete_api(request, pk):
-    """DELETE /settingsapp/api/donation-groups/<pk>/delete/"""
+    """DELETE /settings/api/donation-groups/<pk>/delete/"""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -286,7 +286,7 @@ def donation_group_delete_api(request, pk):
 
 @require_http_methods(["POST"])
 def donation_group_toggle_active_api(request, pk):
-    """POST /settingsapp/api/donation-groups/<pk>/toggle-active/"""
+    """POST /settings/api/donation-groups/<pk>/toggle-active/"""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -307,7 +307,7 @@ def donation_group_toggle_active_api(request, pk):
 
 @require_http_methods(["POST"])
 def donation_group_member_add_api(request, pk):
-    """POST /settingsapp/api/donation-groups/<pk>/members/add/ — body: {"member": <id>}"""
+    """POST /settings/api/donation-groups/<pk>/members/add/ — body: {"member": <id>}"""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -332,7 +332,7 @@ def donation_group_member_add_api(request, pk):
 
 @require_http_methods(["DELETE"])
 def donation_group_member_remove_api(request, pk, membership_pk):
-    """DELETE /settingsapp/api/donation-groups/<pk>/members/<membership_pk>/remove/"""
+    """DELETE /settings/api/donation-groups/<pk>/members/<membership_pk>/remove/"""
     unauth = _require_auth(request)
     if unauth:
         return unauth

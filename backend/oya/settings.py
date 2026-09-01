@@ -5,7 +5,6 @@ Okpo Youths Association Management System
 """
 
 import os
-import sys
 from decouple import config
 from pathlib import Path
 
@@ -21,23 +20,7 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DJANGO_DEBUG", default="True").lower() == "true"
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in config("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
-    if host.strip()
-]
-
-# ─── LOCAL DEV SERVER OVERRIDE ───
-# When running `python manage.py runserver` locally, force DEBUG mode
-# so SECURE_SSL_REDIRECT, HSTS, and production CORS locks don't break
-# the connection from your Live Server frontend (e.g. port 5501).
-RUNNING_DEV_SERVER = len(sys.argv) > 1 and sys.argv[1] == "runserver"
-if RUNNING_DEV_SERVER:
-    DEBUG = True
-    # Ensure local hosts are always allowed when using runserver
-    for _dev_host in ("localhost", "127.0.0.1", "0.0.0.0"):
-        if _dev_host not in ALLOWED_HOSTS:
-            ALLOWED_HOSTS.append(_dev_host)
+ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
 # Application definition
 DJANGO_APPS = [
@@ -114,21 +97,51 @@ ASGI_APPLICATION = "oya.asgi.application"
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 # Database
-DATABASES = {
-    "default": {
-        "ENGINE": config("DB_ENGINE", default="django.db.backends.sqlite3"),
-        "NAME": config("DB_NAME", default=BASE_DIR / "db.sqlite3"),
-        "USER": config("DB_USER", default=""),
-        "PASSWORD": config("DB_PASSWORD", default=""),
-        "HOST": config("DB_HOST", default=""),
-        "PORT": config("DB_PORT", default=""),
-        "CONN_MAX_AGE": 60,
-        "CONN_HEALTH_CHECKS": True,
-        "OPTIONS": {
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+#
+# render.yaml provisions a managed Postgres database and injects its
+# connection string as DATABASE_URL — but nothing in this file was
+# reading that variable, so in production Django was silently falling
+# back to the DB_* vars below (or SQLite, if those aren't set either).
+# dj_database_url parses DATABASE_URL when present; the DB_* vars
+# remain as an explicit fallback for any environment that sets them
+# individually instead (e.g. a MySQL host configured by hand).
+import dj_database_url
+
+DATABASE_URL = config("DATABASE_URL", default="")
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=60,
+            conn_health_checks=True,
+        )
+    }
+    # The STRICT_TRANS_TABLES init_command is MySQL-specific — only
+    # apply it if the resolved engine is actually MySQL, so this
+    # doesn't break a Postgres DATABASE_URL (Postgres has no concept
+    # of sql_mode and would error on this OPTIONS key).
+    if "mysql" in DATABASES["default"]["ENGINE"]:
+        DATABASES["default"].setdefault("OPTIONS", {})
+        DATABASES["default"]["OPTIONS"]["init_command"] = "SET sql_mode='STRICT_TRANS_TABLES'"
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": config("DB_ENGINE", default="django.db.backends.sqlite3"),
+            "NAME": config("DB_NAME", default=BASE_DIR / "db.sqlite3"),
+            "USER": config("DB_USER", default=""),
+            "PASSWORD": config("DB_PASSWORD", default=""),
+            "HOST": config("DB_HOST", default=""),
+            "PORT": config("DB_PORT", default=""),
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": (
+                {"init_command": "SET sql_mode='STRICT_TRANS_TABLES'"}
+                if config("DB_ENGINE", default="django.db.backends.sqlite3") == "django.db.backends.mysql"
+                else {}
+            ),
         }
     }
-}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -169,12 +182,11 @@ STATICFILES_DIRS = [
 ]
 
 
-# CORS & CSRF origins — add common local dev servers by default
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in config(
         "CORS_ALLOWED_ORIGINS",
-        default="http://localhost:3000,http://localhost:5500,http://localhost:8000,http://127.0.0.1:8000",
+        default="",
     ).split(",")
     if origin.strip()
 ]
@@ -183,34 +195,19 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in config(
         "CSRF_TRUSTED_ORIGINS",
-        default="http://localhost:3000,http://localhost:5500,http://localhost:8000,http://127.0.0.1:8000",
+        default="",
     ).split(",")
     if origin.strip()
 ]
 
-# REQUIRED because api.js uses credentials: "include" on every fetch
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False
 
-# Allow JS to read the csrftoken cookie so it can send the X-CSRFToken header
-CSRF_COOKIE_HTTPONLY = False
-SESSION_COOKIE_HTTPONLY = True
-
-# In DEBUG be permissive — CORS headers will allow your local frontend
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-    # Still ensure CSRF trusted origins cover your dev setup
-    _dev_origins = [
-        "http://localhost:3000",
-        "http://localhost:5500",
-        "http://localhost:5501",
-        "http://localhost:8000",
-        "http://127.0.0.1:5500",
-        "http://127.0.0.1:5501",
-        "http://127.0.0.1:8000",
-    ]
-    for _o in _dev_origins:
-        if _o not in CSRF_TRUSTED_ORIGINS:
-            CSRF_TRUSTED_ORIGINS.append(_o)
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in ALLOWED_HOSTS
+    if host.strip()
+]
 
 
 # ============================================
@@ -227,10 +224,10 @@ STORAGES = {
     },
 }
 
-# B2 Credentials (from Railway env vars) — defaults allow local dev without them
-AWS_ACCESS_KEY_ID = config("B2_KEY_ID", default="")
-AWS_SECRET_ACCESS_KEY = config("B2_APPLICATION_KEY", default="")
-AWS_STORAGE_BUCKET_NAME = config("B2_BUCKET_NAME", default="")
+# B2 Credentials (from Railway env vars)
+AWS_ACCESS_KEY_ID = config("B2_KEY_ID")
+AWS_SECRET_ACCESS_KEY = config("B2_APPLICATION_KEY")
+AWS_STORAGE_BUCKET_NAME = config("B2_BUCKET_NAME")
 AWS_S3_REGION_NAME = config("B2_BUCKET_REGION", default="us-east-005")
 AWS_S3_ENDPOINT_URL = config("B2_ENDPOINT_URL", default="https://s3.us-east-005.backblazeb2.com")
 
@@ -241,8 +238,8 @@ AWS_QUERYSTRING_AUTH = False
 AWS_DEFAULT_ACL = "public-read"
 AWS_S3_FILE_OVERWRITE = True
 
-# Media URL (only relevant when bucket name is configured)
-MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.backblazeb2.com/" if AWS_STORAGE_BUCKET_NAME else "/media/"
+# Media URL
+MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.backblazeb2.com/"
 
 # ============================================
 # WHITENOISE (Production)

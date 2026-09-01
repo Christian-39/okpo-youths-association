@@ -678,9 +678,16 @@ def prepaid_detail_api(request, member_id):
 def dues_debtors_list_api(request):
     """
     GET /finance/api/dues/debtors/?search=&year=&page=
-    Mirrors finance.views.dues_debtors_list's per-member debt
-    calculation exactly (same DuesPayment.get_member_debt() calls,
-    same sort-by-highest-debt order).
+
+    Performance note: the previous version called
+    DuesPayment.get_member_debt(member) inside a per-member Python loop,
+    which runs ~4 aggregate queries per member — with ~1,500 members
+    that's 6,000+ queries on a single page load. This version bulk-fetches
+    every member's DuesPayment rows and last-payment date in two queries
+    total, then computes the same debt math (matching
+    DuesPayment.get_member_debt's total_paid/debt_owed/years_paid logic
+    exactly) in memory. The business rule — debt only counted from
+    join_year onward — is unchanged.
     """
     unauth = _require_auth(request)
     if unauth:
@@ -694,32 +701,52 @@ def dues_debtors_list_api(request):
     members_qs = exclude_admin_users(members_qs)
     if search_term:
         members_qs = members_qs.filter(Q(full_name__icontains=search_term) | Q(serial_number__icontains=search_term) | Q(phone__icontains=search_term))
+    members = list(members_qs)
+    member_ids = [m.id for m in members]
+
+    # Bulk-fetch every DuesPayment row for these members in one query,
+    # grouped by member_id, instead of one query per member.
+    dues_by_member = {}
+    for row in DuesPayment.objects.filter(member_id__in=member_ids).values("member_id", "year", "amount_paid"):
+        dues_by_member.setdefault(row["member_id"], []).append((row["year"], row["amount_paid"]))
+
+    # Bulk-fetch each member's last payment date in one query.
+    last_payment_by_member = {
+        row["member_id"]: row["max_date"]
+        for row in DuesPaymentTransaction.objects.filter(member_id__in=member_ids)
+        .values("member_id").annotate(max_date=Max("payment_date"))
+    }
 
     debtor_list = []
-    for member in members_qs:
-        debt_info = DuesPayment.get_member_debt(member)
-        debt_owed = debt_info.get("debt_owed", Decimal("0"))
+    for member in members:
+        join_year = DuesPayment.get_member_join_year(member)  # pure Python, no query
+        start_year = max(join_year, PLATFORM_START_YEAR)
+        years_expected = list(range(start_year, current_year + 1))
+        years_expected_set = set(years_expected)
+        total_expected = len(years_expected) * DuesPayment.YEARLY_DUES_AMOUNT
+
+        member_dues = dues_by_member.get(member.id, [])
+        total_paid = sum((amt for yr, amt in member_dues if yr in years_expected_set), Decimal("0"))
+        years_paid = [yr for yr, amt in member_dues if yr in years_expected_set and amt >= DuesPayment.YEARLY_DUES_AMOUNT]
+        debt_owed = max(total_expected - total_paid, Decimal("0"))
+
         if debt_owed <= 0:
             continue
 
         if year_filter:
             year_int = int(year_filter)
-            join_year = DuesPayment.get_member_join_year(member)
             if year_int < join_year or year_int > current_year:
                 continue
-            dp = DuesPayment.objects.filter(member=member, year=year_int).first()
-            if dp and dp.is_fully_paid:
+            year_amt = next((amt for yr, amt in member_dues if yr == year_int), Decimal("0"))
+            if year_amt >= DuesPayment.YEARLY_DUES_AMOUNT:
                 continue
 
-        years_expected = debt_info.get("years_expected", [])
-        years_paid = debt_info.get("years_paid", [])
-        total_due = len(years_expected) * DuesPayment.YEARLY_DUES_AMOUNT
-        last_payment = DuesPaymentTransaction.objects.filter(member=member).aggregate(max_date=Max("payment_date"))["max_date"]
+        last_payment = last_payment_by_member.get(member.id)
 
         debtor_list.append({
             "member": _serialize_member_brief(member),
-            "total_due": total_due,
-            "total_paid": total_due - debt_owed,
+            "total_due": total_expected,
+            "total_paid": total_expected - debt_owed,
             "debt": debt_owed,
             "years_missed": len(years_expected) - len(years_paid),
             "last_payment_date": last_payment,

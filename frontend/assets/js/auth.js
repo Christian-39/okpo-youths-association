@@ -15,19 +15,19 @@
     // (see accounts/api.py). Safe to call on every page load; it's a GET.
     try {
       await apiFetch("/accounts/api/csrf/");
-    } catch (_) {
-      /* non-fatal — login will still work via the session cookie flow */
+    } catch (err) {
+      // Non-fatal — login still works via the session cookie flow even
+      // without this pre-warm call. Logged (not silently swallowed) so
+      // a genuine backend/CORS outage is still visible in devtools.
+      console.warn("OYA: couldn't pre-warm CSRF cookie (non-fatal):", err);
     }
   }
 
   async function login(serialNumber, pin) {
-      // Fetch the CSRF cookie first so the POST is accepted
-      await ensureCsrfCookie();
-
-      return apiFetch("/accounts/api/login/", {
-        method: "POST",
-        body: JSON.stringify({ serial_number: serialNumber, pin }),
-      });
+    return apiFetch("/accounts/api/login/", {
+      method: "POST",
+      body: JSON.stringify({ serial_number: serialNumber, pin }),
+    });
   }
 
   async function logout() {

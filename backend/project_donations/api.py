@@ -78,7 +78,7 @@ def _serialize_donor(d, detail=False):
 
 @require_http_methods(["GET"])
 def outside_donor_list_api(request):
-    """GET /project_donations/api/outside-donors/list/?search=&page="""
+    """GET /project-donations/api/outside-donors/list/?search=&page="""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -126,7 +126,7 @@ def outside_donor_detail_api(request, pk):
 
 @require_http_methods(["GET"])
 def outside_donor_form_meta_api(request):
-    """GET /project_donations/api/outside-donors/form-meta/ — active members for the invited_by field."""
+    """GET /project-donations/api/outside-donors/form-meta/ — active members for the invited_by field."""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -137,7 +137,7 @@ def outside_donor_form_meta_api(request):
 
 @require_http_methods(["POST"])
 def outside_donor_create_api(request):
-    """POST /project_donations/api/outside-donors/create/ (multipart/form-data)"""
+    """POST /project-donations/api/outside-donors/create/ (multipart/form-data)"""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -221,7 +221,7 @@ def _serialize_donation(d):
 
 @require_http_methods(["GET"])
 def donation_list_api(request):
-    """GET /project_donations/api/donations/list/?search=&project=&donor_type=&donation_type=&status=&date_from=&date_to=&page="""
+    """GET /project-donations/api/donations/list/?search=&project=&donor_type=&donation_type=&status=&date_from=&date_to=&page="""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -282,7 +282,7 @@ def donation_detail_api(request, pk):
 
 @require_http_methods(["GET"])
 def donation_form_meta_api(request):
-    """GET /project_donations/api/donations/form-meta/ — members/outside-donors/projects for the donation form."""
+    """GET /project-donations/api/donations/form-meta/ — members/outside-donors/projects for the donation form."""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -305,7 +305,7 @@ def donation_form_meta_api(request):
 
 @require_http_methods(["POST"])
 def donation_create_api(request):
-    """POST /project_donations/api/donations/create/ (multipart/form-data — receipt upload)"""
+    """POST /project-donations/api/donations/create/ (multipart/form-data — receipt upload)"""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -365,7 +365,7 @@ def donation_delete_api(request, pk):
 
 @require_http_methods(["POST"])
 def donation_fulfill_api(request, pk):
-    """POST /project_donations/api/donations/<pk>/fulfill/ — mirrors donation_fulfill's status transition."""
+    """POST /project-donations/api/donations/<pk>/fulfill/ — mirrors donation_fulfill's status transition."""
     unauth = _require_auth(request)
     if unauth:
         return unauth
@@ -385,7 +385,7 @@ def donation_fulfill_api(request, pk):
 
 @require_http_methods(["POST"])
 def donation_cancel_pledge_api(request, pk):
-    """POST /project_donations/api/donations/<pk>/cancel-pledge/"""
+    """POST /project-donations/api/donations/<pk>/cancel-pledge/"""
     unauth = _require_auth(request)
     if unauth:
         return unauth

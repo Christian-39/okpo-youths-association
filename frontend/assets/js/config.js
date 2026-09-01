@@ -17,7 +17,7 @@
   // ── API Base URL ──────────────────────────────────────
 
   const API_BASE_URL = isLocal
-    ? "http://localhost:8000"
+    ? "http://127.0.0.1:8000"
     : "https://okpo-youths-association.onrender.com";
 
   window.OYA_CONFIG = {

@@ -31,11 +31,12 @@
   }
 
   async function logout() {
-    try {
-      await apiFetch("/accounts/api/logout/", { method: "POST" });
-    } finally {
-      window.location.href = window.OYA_CONFIG.ROUTES.login;
-    }
+      try {
+        await apiFetch("/accounts/api/logout/", { method: "POST" });
+      } finally {
+        window.OYA_API.clearCsrfCache();   // ← ADD THIS
+        window.location.href = window.OYA_CONFIG.ROUTES.login;
+      }
   }
 
   /** Returns the current user object, or null if not authenticated. */

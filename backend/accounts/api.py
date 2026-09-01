@@ -1,21 +1,12 @@
 """
-JSON API views for the standalone OYA frontend.
-
-Added alongside the existing accounts/views.py (which still powers the
-original Django-rendered templates and is left untouched). These views
-reuse the exact same authenticate()/login()/logout() calls and the same
-User model methods (has_admin_access, has_executive_access, member, ...)
-that the template-based views already use — no business logic is
-duplicated or reimplemented here.
-
-Drop this file in as accounts/api.py, then wire it up in accounts/urls.py
-(see urls_patch.py in this same folder for the lines to add).
+JSON API views for OYA frontend.
 """
 import json
 import logging
 
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
+from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
@@ -48,13 +39,8 @@ def _serialize_user(user):
 @ensure_csrf_cookie
 @require_http_methods(["GET"])
 def csrf_api(request):
-    """
-    GET /accounts/api/csrf/
-    Hitting this once (e.g. on page load) sets Django's csrftoken cookie
-    so the frontend can read it and send it back as X-CSRFToken on
-    POST/PUT/PATCH/DELETE — see assets/js/api.js.
-    """
-    return JsonResponse({"detail": "CSRF cookie set."})
+    token = get_token(request)
+    return JsonResponse({"csrfToken": token})
 
 
 @require_http_methods(["POST"])

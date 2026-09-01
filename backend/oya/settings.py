@@ -186,7 +186,15 @@ CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in config(
         "CORS_ALLOWED_ORIGINS",
-        default="",
+        default=(
+            "http://localhost:3000,"
+            "http://localhost:5500,"
+            "http://127.0.0.1:5501,"
+            "http://localhost:8000,"
+            "http://127.0.0.1:3000,"
+            "http://127.0.0.1:5500,"
+            "http://127.0.0.1:8000"
+        ),
     ).split(",")
     if origin.strip()
 ]
@@ -195,7 +203,15 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in config(
         "CSRF_TRUSTED_ORIGINS",
-        default="",
+        default=(
+            "http://localhost:3000,"
+            "http://localhost:5500,"
+            "http://127.0.0.1:5501,"
+            "http://localhost:8000,"
+            "http://127.0.0.1:3000,"
+            "http://127.0.0.1:5500,"
+            "http://127.0.0.1:8000"
+        ),
     ).split(",")
     if origin.strip()
 ]
@@ -203,11 +219,21 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in ALLOWED_HOSTS
-    if host.strip()
-]
+# ── Cookie settings: explicit for both DEBUG and production ──
+if DEBUG:
+    # Local dev runs on HTTP.  SameSite=Lax is the safest default that
+    # still works across ports on the SAME hostname (localhost:5500 -> localhost:8000).
+    # IMPORTANT: do NOT mix "localhost" and "127.0.0.1" — pick one host
+    # for both frontend and backend or the cookie will be rejected.
+    SESSION_COOKIE_SAMESITE = "Lax"
+    CSRF_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+else:
+    SESSION_COOKIE_SAMESITE = "None"
+    CSRF_COOKIE_SAMESITE = "None"
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 
 # ============================================
@@ -251,22 +277,6 @@ if not DEBUG:
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
     }
 
-# Security settings for production
-if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    # Frontend and backend are separate origins (e.g. a static site on
-    # Render + this API on Render) — cross-site cookies require
-    # SameSite=None, which browsers only honor when Secure=True (already
-    # set above). Without this, the session/CSRF cookie set on login is
-    # silently dropped by the browser on the next cross-origin request.
-    SESSION_COOKIE_SAMESITE = "None"
-    CSRF_COOKIE_SAMESITE = "None"
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

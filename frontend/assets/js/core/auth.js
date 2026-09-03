@@ -13,20 +13,22 @@
  * every page is behind login — so Auth.requireAuth() (not present in
  * GadgetHub) is the normal way a page guards itself.
  */
-import { API } from "./api.js";
+import { API, fetchCsrfToken, clearCsrfCache } from "./api.js";
 
 class Auth {
   /**
-   * Django's csrftoken cookie is only set once a view uses
-   * ensure_csrf_cookie. Safe to call on every page load; it's a GET.
+   * Primes the cached CSRF token (read from the JSON body of
+   * /accounts/api/csrf/, since cross-origin deployments can't read
+   * the cookie directly — see api.js). Safe to call on every page
+   * load; it's a GET.
    */
   static async ensureCsrfCookie() {
     try {
-      await API.get("/accounts/api/csrf/", { skipAuthRedirect: true });
+      await fetchCsrfToken();
     } catch (err) {
       // Non-fatal — login still works via the session cookie flow
       // even without this pre-warm call.
-      console.warn("OYA: couldn't pre-warm CSRF cookie (non-fatal):", err);
+      console.warn("OYA: couldn't pre-warm CSRF token (non-fatal):", err);
     }
   }
 
@@ -51,6 +53,7 @@ class Auth {
     try {
       await API.post("/accounts/api/logout/", null, { skipAuthRedirect: true });
     } finally {
+      clearCsrfCache();
       window.location.href = "login.html";
     }
   }

@@ -51,6 +51,41 @@ function detectApiBase() {
 const API_BASE = detectApiBase();
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
 
+/**
+ * Cached CSRF token, read from the JSON body of /accounts/api/csrf/.
+ *
+ * Reading document.cookie for "csrftoken" only works when frontend and
+ * backend share the same domain. In production they're separate
+ * origins (e.g. a static site + this API on Render), and a page can
+ * never read cookies set by a *different* origin via document.cookie —
+ * that's true even with SameSite=None. So the token has to come from
+ * the response body instead, exactly like assets/js/api.js already does.
+ */
+let _cachedCsrf = null;
+
+async function fetchCsrfToken() {
+  if (_cachedCsrf) return _cachedCsrf;
+  try {
+    const res = await fetch(`${API_BASE}/accounts/api/csrf/`, {
+      method: "GET",
+      credentials: "include",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      _cachedCsrf = data.csrfToken || data.csrftoken || null;
+    }
+  } catch (err) {
+    // fall through to cookie fallback below
+  }
+  // Same-origin (e.g. local dev) deployments still work via the cookie.
+  if (!_cachedCsrf) _cachedCsrf = getCookie("csrftoken");
+  return _cachedCsrf;
+}
+
+function clearCsrfCache() {
+  _cachedCsrf = null;
+}
+
 class ApiError extends Error {
   constructor(message, status, data) {
     super(message);
@@ -83,7 +118,7 @@ class API {
     const body = isPlainObjectBody ? JSON.stringify(options.body) : options.body;
 
     if (!SAFE_METHODS.has(method)) {
-      const csrftoken = getCookie("csrftoken");
+      const csrftoken = await fetchCsrfToken();
       if (csrftoken) headers["X-CSRFToken"] = csrftoken;
     }
 
@@ -136,7 +171,13 @@ class API {
    */
   static extractErrorMessage(data, status) {
     if (!data) return `Request failed (${status})`;
-    if (typeof data === "string") return data;
+    if (typeof data === "string") {
+      // A non-JSON error body is usually a server-rendered HTML error
+      // page (e.g. Django's DEBUG 403/500 page), not something to show
+      // a user — surfacing raw HTML in the UI is a bug, not a message.
+      const looksLikeHtml = /^\s*</.test(data);
+      return looksLikeHtml ? `Request failed (${status})` : data;
+    }
     if (data.detail) return data.detail;
     if (data.error) return data.error;
     if (data.message) return data.message;
@@ -188,4 +229,4 @@ function debounce(fn, ms) {
   };
 }
 
-export { API, ApiError, API_BASE, formatNaira, debounce, getCookie };
+export { API, ApiError, API_BASE, formatNaira, debounce, getCookie, fetchCsrfToken, clearCsrfCache };

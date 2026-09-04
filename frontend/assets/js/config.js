@@ -30,7 +30,6 @@
       memberDetail: "member-detail.html",
       memberForm: "member-form.html",
       profile: "profile.html",
-      sidebar: "sidebar.html",
     },
 
     // Optional: expose the flag so other scripts can branch if needed

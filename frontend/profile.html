@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <title>My Profile | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <style>
+    /* Page-scoped styles — ported from accounts/profile.html's original
+       inline <style> block (Django-template source of truth). */
+    .badge-prepaid-mini {
+      background: var(--oya-info-bg);
+      color: var(--oya-info);
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      margin-left: 0.25rem;
+    }
+    @media (max-width: 768px) {
+      .detail-meta-grid { grid-template-columns: 1fr 1fr !important; }
+      .dashboard-grid-2 { grid-template-columns: 1fr !important; }
+      .dashboard-grid-4 { grid-template-columns: 1fr 1fr !important; }
+      .page-header { flex-direction: column !important; align-items: flex-start !important; }
+      .page-header-actions { width: 100% !important; flex-wrap: wrap !important; }
+      .form-actions .btn { width: 100% !important; justify-content: center !important; }
+      .form-row { grid-template-columns: 1fr !important; gap: 0 !important; }
+    }
+    @media (max-width: 480px) {
+      .detail-meta-grid { grid-template-columns: 1fr !important; }
+      .dashboard-grid-4 { grid-template-columns: 1fr !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+          <div id="loadingState" style="text-align:center;padding:3rem;color:var(--oya-text-muted);">Loading&hellip;</div>
+          <div id="detailContent" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+    function fmtDate(iso) {
+      if (!iso) return "\u2014";
+      const dt = new Date(iso);
+      if (isNaN(dt)) return esc(String(iso));
+      return dt.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+    }
+
+    let currentUser = null;
+    let currentPaymentsPage = 1;
+
+    function yearRangeLabel(g) {
+      return g.start_year === g.end_year ? String(g.start_year) : `${g.start_year}\u2013${g.end_year}`;
+    }
+
+    function renderYearGroups(groups) {
+      if (!groups.length) {
+        return `<div style="padding:2rem;text-align:center;color:var(--oya-text-muted);">No dues years tracked yet.</div>`;
+      }
+      return groups.map((g) => {
+        if (g.status === "PAID") {
+          const p = g.payment;
+          const recordedLine = p
+            ? `Recorded ${fmtDate(p.created_at)}${p.recorded_by ? " by " + esc(p.recorded_by) : ""}${p.notes ? " &bull; " + esc(p.notes) : ""}`
+            : "";
+          return `
+          <div class="activity-item">
+            <div class="activity-icon success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <div class="activity-content">
+              <div class="activity-text"><strong>${yearRangeLabel(g)} Dues</strong> \u2014 Paid <span style="font-size:0.75rem;color:var(--oya-text-muted);">(${g.count} year${g.count === 1 ? "" : "s"})</span></div>
+              <div class="activity-time">${recordedLine}</div>
+            </div>
+            <span class="badge badge-success">${naira(g.total_amount)}</span>
+          </div>`;
+        }
+        return `
+        <div class="activity-item">
+          <div class="activity-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+          <div class="activity-content">
+            <div class="activity-text"><strong>${yearRangeLabel(g)} Dues</strong> \u2014 Outstanding <span style="font-size:0.75rem;color:var(--oya-text-muted);">(${g.count} year${g.count === 1 ? "" : "s"})</span></div>
+            <div class="activity-time">${naira(g.total_amount)} total due</div>
+          </div>
+          <span class="badge badge-danger">Owed</span>
+        </div>`;
+      }).join("");
+    }
+
+    function donationTypeBadge(d) {
+      return `<span class="badge badge-info">${esc(d.income_type_display)}</span>`;
+    }
+
+    function renderDonationsTable(donations, totalDonations) {
+      const rows = donations.length ? donations.map((d) => `
+        <tr>
+          <td class="cell-muted">${fmtDate(d.created_at)}</td>
+          <td>${donationTypeBadge(d)}</td>
+          <td><span class="cell-name">${esc(d.reason)}</span></td>
+          <td style="font-weight:600;color:var(--oya-success);">${naira(d.amount)}</td>
+        </tr>`).join("") : `<tr><td colspan="4" style="text-align:center;padding:2rem;"><p style="color:var(--oya-text-muted);">No donations or contributions recorded yet.</p></td></tr>`;
+      return `
+      <table class="data-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot style="background:var(--oya-surface);border-top:2px solid var(--oya-border);">
+          <tr><td colspan="3" style="text-align:right;font-weight:600;">Total Donations:</td><td style="font-weight:700;color:var(--oya-success);">${naira(totalDonations)}</td></tr>
+        </tfoot>
+      </table>`;
+    }
+
+    function renderDuesTxnTable(groups, totalDuesPaid, userId) {
+      const rows = groups.length ? groups.map((item) => `
+        <tr>
+          <td style="white-space:nowrap;">
+            <span class="badge badge-success">Dues</span>
+            <span class="cell-name">${esc(item.reason)}</span>
+            ${item.is_prepaid ? '<span class="badge badge-prepaid-mini">Prepaid</span>' : ""}
+          </td>
+          <td style="font-weight:600;color:var(--oya-success);white-space:nowrap;">${naira(item.amount)}</td>
+          <td class="cell-muted" style="white-space:nowrap;">${esc(item.recorded_by || "System")}</td>
+          <td class="cell-muted" style="white-space:nowrap;">${fmtDate(item.payment_date)}</td>
+          <td style="white-space:nowrap;">
+            <div class="table-actions" style="flex-wrap:nowrap;gap:0.25rem;">
+              <a href="member-dues-detail.html?id=${userId}" class="table-action-btn" title="View Full Tracker">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </a>
+            </div>
+          </td>
+        </tr>`).join("") : `<tr><td colspan="5" style="text-align:center;padding:2rem;"><p style="color:var(--oya-text-muted);">No dues payments recorded yet.</p></td></tr>`;
+      return `
+      <table class="data-table">
+        <thead><tr><th>Description</th><th>Amount</th><th>Recorded By</th><th>Date</th><th class="text-end" style="width:80px;">Actions</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot style="background:var(--oya-surface);border-top:2px solid var(--oya-border);">
+          <tr><td colspan="2" style="text-align:right;font-weight:600;">Total Dues Paid:</td><td colspan="3" style="font-weight:700;color:var(--oya-success);">${naira(totalDuesPaid)}</td></tr>
+        </tfoot>
+      </table>`;
+    }
+
+    function paymentTypeBadge(p) {
+      if (p.type === "dues_grouped" || p.income_type === "DUES") {
+        return `<span class="badge badge-success">Dues</span>${p.is_prepaid ? '<span class="badge badge-prepaid-mini">Prepaid</span>' : ""}`;
+      }
+      if (p.income_type === "DONATION") return `<span class="badge badge-info">Donation</span>`;
+      if (p.income_type === "EVENT") return `<span class="badge badge-warning">Event</span>`;
+      return `<span class="badge badge-secondary">Other</span>`;
+    }
+
+    function renderAllPaymentsTable(payload) {
+      const rows = payload.results.length ? payload.results.map((p) => `
+        <tr>
+          <td class="cell-muted">${fmtDate(p.date_display)}</td>
+          <td>${paymentTypeBadge(p)}</td>
+          <td><span class="cell-name">${esc(p.reason)}</span></td>
+          <td style="font-weight:600;color:var(--oya-success);">${naira(p.amount)}</td>
+          <td class="cell-muted">${esc(p.recorded_by || "System")}</td>
+        </tr>`).join("") : `<tr><td colspan="5" style="text-align:center;padding:2rem;"><p style="color:var(--oya-text-muted);">No payment history found.</p></td></tr>`;
+
+      let pagination = "";
+      if (payload.num_pages > 1) {
+        const pages = [];
+        for (let n = 1; n <= payload.num_pages; n++) {
+          if (n === payload.page || n === 1 || n === payload.num_pages || Math.abs(n - payload.page) < 3) {
+            pages.push(`<button class="page-btn${n === payload.page ? " active" : ""}" data-page="${n}"${n === payload.page ? " disabled" : ""}>${n}</button>`);
+          } else if (n === payload.page - 3 || n === payload.page + 3) {
+            pages.push(`<span class="page-btn" style="cursor:default;border:none;background:transparent;">...</span>`);
+          }
+        }
+        pagination = `
+        <div class="card-footer">
+          <span style="font-size:0.8125rem;color:var(--oya-text-muted);">Page ${payload.page} of ${payload.num_pages} &middot; ${payload.count} records</span>
+          <div class="pagination">
+            <button class="page-btn" data-page="${payload.page - 1}" ${payload.has_previous ? "" : "disabled"}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+            ${pages.join("")}
+            <button class="page-btn" data-page="${payload.page + 1}" ${payload.has_next ? "" : "disabled"}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+          </div>
+        </div>`;
+      }
+
+      return `
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th>Recorded By</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${pagination}`;
+    }
+
+    function render(data) {
+      const u = data.user;
+      const initials = (u.full_name || "?").trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+      const roleLabel = u.member_position || u.display_role || "Member";
+
+      return `
+      <div class="page-header detail-header">
+        <div class="page-header-left">
+          <div style="display:flex;align-items:center;gap:1rem;">
+            ${u.photo_url
+              ? `<img src="${esc(u.photo_url)}" alt="${esc(u.full_name)}" class="avatar avatar-lg">`
+              : `<div class="avatar avatar-lg" style="background:var(--oya-primary);color:#fff;">${esc(initials)}</div>`}
+            <div>
+              <h1 style="font-size:clamp(1.125rem,3vw,1.5rem);">${esc(u.full_name)}</h1>
+              <p style="margin:0;color:var(--oya-text-secondary);">${esc(roleLabel)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+        <div class="kpi-card accent-success">
+          <div class="kpi-header"><div class="kpi-icon" style="background:var(--oya-success-bg);color:var(--oya-success);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg></div></div>
+          <div class="kpi-value" style="color:var(--oya-success);">${naira(data.total_paid)}</div>
+          <div class="kpi-label">Total Contributions</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div></div>
+          <div class="kpi-value">${naira(data.total_dues_paid)}</div>
+          <div class="kpi-label">Dues Paid</div>
+        </div>
+        <div class="kpi-card accent-info">
+          <div class="kpi-header"><div class="kpi-icon" style="background:var(--oya-info-bg);color:var(--oya-info);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div>
+          <div class="kpi-value" style="color:var(--oya-info);">${naira(data.total_donations)}</div>
+          <div class="kpi-label">Donations & Other</div>
+        </div>
+        <div class="kpi-card accent-warning">
+          <div class="kpi-header"><div class="kpi-icon" style="background:var(--oya-warning-bg);color:var(--oya-warning);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div></div>
+          <div class="kpi-value" style="color:var(--oya-warning);">${Number(data.debt_info.debt_owed) > 0 ? naira(data.debt_info.debt_owed) : "Paid Up"}</div>
+          <div class="kpi-label">Dues Outstanding</div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid dashboard-grid-2" style="margin-bottom:1.5rem;">
+        <div class="card">
+          <div class="card-header"><div><div class="card-header-title">Year-by-Year Dues Status</div><div class="card-header-subtitle">${naira(data.yearly_dues)} per year</div></div></div>
+          <div class="card-body" style="padding:0;"><div class="activity-feed" style="padding:0 1.25rem;">${renderYearGroups(data.year_status_grouped)}</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-header-title">Donations & Contributions</div><div class="card-header-subtitle">All non-dues payments</div></div></div>
+          <div class="card-body" style="padding:0;"><div class="table-container">${renderDonationsTable(data.donations, data.total_donations)}</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header"><div><div class="card-header-title">Dues Payment History</div><div class="card-header-subtitle">Grouped by deposit &mdash; click view to see full year tracker</div></div></div>
+        <div class="card-body" style="padding:0;"><div class="table-container">${renderDuesTxnTable(data.dues_transactions_grouped, data.total_dues_paid, u.id)}</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header"><div><div class="card-header-title">All Payment History</div><div class="card-header-subtitle">Complete record of all contributions</div></div></div>
+        <div class="card-body" style="padding:0;" id="allPaymentsBody">${renderAllPaymentsTable(data.payments)}</div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header"><div><div class="card-header-title">Profile Information</div><div class="card-header-subtitle">Your account details</div></div></div>
+        <div class="card-body">
+          <div class="detail-meta-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div><div class="meta-label">Serial Number</div><div class="meta-value">${esc(u.serial_number)}</div></div>
+            <div><div class="meta-label">Full Name</div><div class="meta-value">${esc(u.full_name)}</div></div>
+            <div><div class="meta-label">Phone</div><div class="meta-value">${esc(u.phone || "Not set")}</div></div>
+            <div><div class="meta-label">State</div><div class="meta-value">${esc(u.state || "Not set")}</div></div>
+            <div><div class="meta-label">Role</div><div class="meta-value">${esc(u.display_role)}</div></div>
+            <div><div class="meta-label">Date Joined</div><div class="meta-value">${fmtDate(u.date_joined)}</div></div>
+            <div><div class="meta-label">Status</div><div class="meta-value">${u.is_active === false ? '<span class="badge badge-danger">Inactive</span>' : '<span class="badge badge-success">Active</span>'}</div></div>
+            <div><div class="meta-label">Member Since</div><div class="meta-value">${u.date_joined ? new Date(u.date_joined).getFullYear() : "\u2014"}</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid dashboard-grid-2" style="margin-bottom:1.5rem;">
+        <div class="card">
+          <div class="form-card-header">
+            <h3 class="form-card-title">Edit Profile</h3>
+            <p style="font-size:0.875rem;color:var(--oya-text-muted);margin:0;">Update your phone and state</p>
+          </div>
+          <div class="form-card-body">
+            <div id="profileFormErrors" style="display:none;margin-bottom:1rem;"></div>
+            <div id="profileFormSuccess" class="alert alert-success" style="display:none;margin-bottom:1rem;">Profile updated successfully.</div>
+            <form id="profileForm" novalidate>
+              <div class="form-row" style="grid-template-columns:1fr;gap:1.5rem;">
+                <div class="form-group">
+                  <label class="form-label">Phone</label>
+                  <input type="text" name="phone" id="profilePhone" class="form-input" placeholder="Phone Number" value="${esc(u.phone || "")}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">State</label>
+                  <input type="text" name="state" id="profileState" class="form-input" placeholder="State" value="${esc(u.state || "")}">
+                </div>
+              </div>
+              <div class="form-actions" style="margin-top:1.5rem;">
+                <button type="submit" class="btn btn-primary" id="profileFormSubmit">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="form-card-header">
+            <h3 class="form-card-title">Change PIN</h3>
+            <p style="font-size:0.875rem;color:var(--oya-text-muted);margin:0;">Update your 6-digit security PIN</p>
+          </div>
+          <div class="form-card-body">
+            <div id="pinFormErrors" style="display:none;margin-bottom:1rem;"></div>
+            <div id="pinFormSuccess" class="alert alert-success" style="display:none;margin-bottom:1rem;">PIN updated successfully.</div>
+            <form id="pinForm" novalidate>
+              <div class="form-row" style="grid-template-columns:1fr;gap:1.5rem;">
+                <div class="form-group">
+                  <label class="form-label">Current PIN</label>
+                  <input type="password" name="current_pin" class="form-input" placeholder="Enter current PIN" maxlength="6" inputmode="numeric">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">New PIN</label>
+                  <input type="password" name="new_pin" class="form-input" placeholder="Enter new 6-digit PIN" maxlength="6" minlength="6" inputmode="numeric">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Confirm New PIN</label>
+                  <input type="password" name="confirm_pin" class="form-input" placeholder="Confirm new PIN" maxlength="6" minlength="6" inputmode="numeric">
+                </div>
+              </div>
+              <div class="form-actions" style="margin-top:1.5rem;">
+                <button type="submit" class="btn btn-primary" id="pinFormSubmit">Update PIN</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function showFieldErrors(boxId, errors) {
+      const box = document.getElementById(boxId);
+      const lines = Array.isArray(errors) ? errors : [String(errors)];
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    function wirePaymentsPagination() {
+      document.querySelectorAll('#allPaymentsBody [data-page]').forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const page = Number(btn.dataset.page);
+          if (!page || page < 1) return;
+          currentPaymentsPage = page;
+          try {
+            const data = await window.OYA_API.apiFetch(`/accounts/api/profile/?payments_page=${page}`);
+            document.getElementById("allPaymentsBody").innerHTML = renderAllPaymentsTable(data.payments);
+            wirePaymentsPagination();
+            window.scrollTo({ top: document.getElementById("allPaymentsBody").offsetTop - 80, behavior: "smooth" });
+          } catch (err) {
+            window.OYA.showToast(err.message || "Couldn't load that page.", "error");
+          }
+        });
+      });
+    }
+
+    function wireForms() {
+      document.getElementById("profileForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("profileFormSubmit");
+        btn.disabled = true;
+        document.getElementById("profileFormErrors").style.display = "none";
+        document.getElementById("profileFormSuccess").style.display = "none";
+        try {
+          const payload = {
+            phone: document.getElementById("profilePhone").value.trim(),
+            state: document.getElementById("profileState").value.trim(),
+          };
+          const res = await window.OYA_API.apiFetch("/accounts/api/profile/update/", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
+          document.getElementById("profileFormSuccess").style.display = "";
+          window.OYA.showToast(res.detail || "Profile updated.", "success");
+        } catch (err) {
+          showFieldErrors("profileFormErrors", (err.data && err.data.errors) || [err.message || "Something went wrong."]);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      document.getElementById("pinForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("pinFormSubmit");
+        btn.disabled = true;
+        document.getElementById("pinFormErrors").style.display = "none";
+        document.getElementById("pinFormSuccess").style.display = "none";
+        const form = e.target;
+        try {
+          const payload = {
+            current_pin: form.current_pin.value,
+            new_pin: form.new_pin.value,
+            confirm_pin: form.confirm_pin.value,
+          };
+          const res = await window.OYA_API.apiFetch("/accounts/api/profile/change-pin/", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
+          document.getElementById("pinFormSuccess").style.display = "";
+          window.OYA.showToast(res.detail || "PIN updated.", "success");
+          form.reset();
+        } catch (err) {
+          showFieldErrors("pinFormErrors", (err.data && err.data.errors) || [err.message || "Something went wrong."]);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    (async function () {
+      currentUser = await window.OYA_SHELL.init({ page: "profile", title: "My Profile" });
+      if (!currentUser) return;
+      try {
+        const data = await window.OYA_API.apiFetch("/accounts/api/profile/");
+        document.getElementById("detailContent").innerHTML = render(data);
+        document.getElementById("loadingState").style.display = "none";
+        document.getElementById("detailContent").style.display = "";
+        wirePaymentsPagination();
+        wireForms();
+      } catch (err) {
+        document.getElementById("loadingState").innerHTML = `<div class="alert alert-danger">Couldn't load your profile: ${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

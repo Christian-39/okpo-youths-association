@@ -8,7 +8,7 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from auditlogs.services import log_request_action
@@ -54,6 +54,7 @@ def csrf_api(request):
     return JsonResponse({"csrfToken": token})
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def login_api(request):
     """
@@ -99,6 +100,7 @@ def login_api(request):
     return JsonResponse({"errors": [message]}, status=401)
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def logout_api(request):
     """POST /accounts/api/logout/"""

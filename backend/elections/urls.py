@@ -20,4 +20,5 @@ urlpatterns = [
     path("api/candidates/<int:pk>/", api.candidate_detail_api, name="candidate_detail_api"),
     path("api/candidates/<int:pk>/update/", api.candidate_update_api, name="candidate_update_api"),
     path("api/candidates/<int:pk>/vote/", api.cast_vote_api, name="cast_vote_api"),
+    path("api/handovers/list/", api.handover_list_api, name="handover_list_api"),
 ]

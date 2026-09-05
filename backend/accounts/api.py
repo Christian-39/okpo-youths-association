@@ -12,7 +12,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from auditlogs.services import log_request_action
-from .forms import FloorMemberProfileForm, ChangePINForm
+from .forms import FloorMemberProfileForm, ChangePINForm, UserCreateForm, UserUpdateForm, PINResetForm
 from .models import User
 from .views import _get_profile_context
 
@@ -37,6 +37,7 @@ def _serialize_user(user):
         "photo_url": user.photo.url if user.photo else None,
         "is_active": user.is_active,
         "date_joined": user.date_joined,
+        "last_login": user.last_login,
         "has_admin_access": user.has_admin_access(),
         "has_executive_access": user.has_executive_access(),
         "is_superuser": user.is_superuser,
@@ -284,3 +285,174 @@ def change_pin_api(request):
 
     errors = [msg for error_list in form.errors.values() for msg in error_list]
     return JsonResponse({"errors": errors}, status=400)
+
+
+# ── User / Admin management ─────────────────────────────────────
+# Mirrors accounts.views.user_list/user_detail/user_create/user_update/
+# user_delete/pin_reset exactly (same querysets, same permission rules,
+# same forms). Note user_list/user_detail only require login — any
+# authenticated user (including floor members) can view this list in
+# the original app; only create/update/delete are role-gated.
+
+@require_http_methods(["GET"])
+def user_list_api(request):
+    """GET /accounts/api/users/?search=&role=&page="""
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Not authenticated."}, status=401)
+
+    from django.db.models import Q
+    from django.core.paginator import Paginator
+
+    queryset = User.objects.all()
+    search_term = request.GET.get("search", "")
+    if search_term:
+        queryset = queryset.filter(
+            Q(serial_number__icontains=search_term)
+            | Q(full_name__icontains=search_term)
+            | Q(phone__icontains=search_term)
+            | Q(state__icontains=search_term)
+            | Q(role__icontains=search_term)
+        )
+
+    role_filter = request.GET.get("role", "")
+    if role_filter:
+        queryset = queryset.filter(role=role_filter)
+
+    queryset = queryset.order_by("-date_joined")
+    paginator = Paginator(queryset, 25)
+    page = paginator.get_page(request.GET.get("page", 1))
+
+    return _json({
+        "results": [_serialize_user(u) for u in page.object_list],
+        "page": page.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page.has_next(),
+        "has_previous": page.has_previous(),
+        "count": paginator.count,
+        "role_choices": User.ROLE_CHOICES,
+    })
+
+
+@require_http_methods(["GET"])
+def user_detail_api(request, pk):
+    """GET /accounts/api/users/<pk>/"""
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Not authenticated."}, status=401)
+
+    from django.shortcuts import get_object_or_404
+    user_obj = get_object_or_404(User, pk=pk)
+    return _json({"user": _serialize_user(user_obj)})
+
+
+@require_http_methods(["POST"])
+def user_create_api(request):
+    """POST /accounts/api/users/create/ — mirrors user_create (executive access required)."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Not authenticated."}, status=401)
+    if not request.user.has_executive_access():
+        return JsonResponse({"detail": "You do not have permission to create users."}, status=403)
+
+    form = UserCreateForm(request.POST, request.FILES)
+    if not form.is_valid():
+        errors = [msg for error_list in form.errors.values() for msg in error_list]
+        return JsonResponse({"errors": errors}, status=400)
+
+    user_obj = form.save(commit=False)
+    # Enforce admin defaults for newly created users — same as the
+    # Django-template view: this "Create User" flow always produces an
+    # admin/superuser account, regardless of the form's role field.
+    user_obj.role = "ADMIN"
+    user_obj.is_staff = True
+    user_obj.is_superuser = True
+    user_obj.is_active = True
+    user_obj.save()
+    log_request_action(
+        request, action="CREATE", object_type="User", object_id=user_obj.id,
+        description=f"Created user {user_obj.serial_number}",
+    )
+    return _json({"detail": f"User {user_obj.serial_number} created successfully.", "user": _serialize_user(user_obj)}, status=201)
+
+
+@require_http_methods(["POST"])
+def user_update_api(request, pk):
+    """POST /accounts/api/users/<pk>/update/ — mirrors user_update.
+
+    Floor members editing themselves get routed to the profile endpoints
+    (/accounts/api/profile/update/, /change-pin/) instead — same
+    FloorMemberProfileForm the Django-template view uses for that case.
+    Only non-floor-member (executive/admin) callers reach UserUpdateForm
+    here, same as the original."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Not authenticated."}, status=401)
+
+    from django.shortcuts import get_object_or_404
+    user_obj = get_object_or_404(User, pk=pk)
+
+    if request.user.is_floor_member():
+        if request.user.id != user_obj.id:
+            return JsonResponse({"detail": "You can only edit your own profile."}, status=403)
+        return JsonResponse({"detail": "Use /accounts/api/profile/update/ to edit your own profile."}, status=400)
+
+    form = UserUpdateForm(request.POST, request.FILES, instance=user_obj)
+    if not form.is_valid():
+        errors = [msg for error_list in form.errors.values() for msg in error_list]
+        return JsonResponse({"errors": errors}, status=400)
+
+    pin_changed = bool(form.cleaned_data.get("new_pin"))
+    user_obj = form.save()
+    if pin_changed and request.user.id == user_obj.id:
+        update_session_auth_hash(request, user_obj)
+
+    log_request_action(
+        request, action="UPDATE", object_type="User", object_id=user_obj.id,
+        description=f"Updated user {user_obj.serial_number}",
+    )
+    return _json({"detail": f"User {user_obj.serial_number} updated successfully.", "user": _serialize_user(user_obj)})
+
+
+@require_http_methods(["POST"])
+def user_delete_api(request, pk):
+    """POST /accounts/api/users/<pk>/delete/ — mirrors user_delete (admin only)."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Not authenticated."}, status=401)
+    if not request.user.has_admin_access():
+        return JsonResponse({"detail": "Admin access required."}, status=403)
+
+    from django.shortcuts import get_object_or_404
+    user_obj = get_object_or_404(User, pk=pk)
+    serial = user_obj.serial_number
+    user_obj.delete()
+    log_request_action(
+        request, action="DELETE", object_type="User", object_id=pk,
+        description=f"Deleted user {serial}",
+    )
+    return _json({"detail": f"User {serial} deleted successfully."})
+
+
+@require_http_methods(["POST"])
+def pin_reset_api(request):
+    """POST /accounts/api/users/pin-reset/ — mirrors pin_reset (admin only)."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Not authenticated."}, status=401)
+    if not request.user.has_admin_access():
+        return JsonResponse({"detail": "Admin access required to reset PINs."}, status=403)
+
+    form = PINResetForm(request.POST)
+    if not form.is_valid():
+        errors = [msg for error_list in form.errors.values() for msg in error_list]
+        return JsonResponse({"errors": errors}, status=400)
+
+    serial_number = form.cleaned_data["serial_number"]
+    new_pin = form.cleaned_data["new_pin"]
+    try:
+        user_obj = User.objects.get(serial_number=serial_number)
+    except User.DoesNotExist:
+        return JsonResponse({"errors": ["User not found."]}, status=400)
+
+    user_obj.set_pin(new_pin)
+    user_obj.save()
+    log_request_action(
+        request, action="PIN_RESET", object_type="User", object_id=user_obj.id,
+        description=f"PIN reset for user {user_obj.serial_number}",
+    )
+    return _json({"detail": f"PIN for {user_obj.serial_number} has been reset successfully."})

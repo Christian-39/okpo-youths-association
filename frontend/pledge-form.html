@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0a3d62">
   <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
-  <title>Record Donation | OYA</title>
+  <title>Record Pledge | OYA</title>
   <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,11 +27,11 @@
       <div class="content-area" id="contentArea">
         <div class="page-container" id="pageContainer" style="max-width:680px;">
 
-          <div class="page-header"><div class="page-header-left"><h1 id="formTitle" style="font-size:clamp(1.125rem,3vw,1.5rem);">Record Donation</h1></div></div>
+          <div class="page-header"><div class="page-header-left"><h1 id="formTitle" style="font-size:clamp(1.125rem,3vw,1.5rem);">Record Pledge</h1></div></div>
 
           <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
 
-          <form id="donationForm" class="card">
+          <form id="pledgeForm" class="card">
             <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
               <div class="form-group">
                 <label class="form-label" for="project">Fundraising Project</label>
@@ -58,24 +58,15 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Invited By (optional)</label>
-                <div style="position:relative;">
-                  <input type="text" id="invitedBySearch" class="form-input" placeholder="Search inviting member (optional)…" autocomplete="off">
-                  <input type="hidden" id="invited_by" name="invited_by">
-                  <div id="invitedByResults" class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;z-index:10;"></div>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="donation_type">Donation Type</label>
+                <label class="form-label" for="donation_type">Contribution Type</label>
                 <select id="donation_type" name="donation_type" class="form-select" required></select>
               </div>
 
               <!-- Money fields -->
               <div id="moneyFields" style="display:flex;flex-direction:column;gap:1.25rem;">
                 <div class="form-group">
-                  <label class="form-label" for="amount">Amount (&#x20A6;)</label>
-                  <input type="number" id="amount" name="amount" class="form-control" step="0.01" min="0.01" placeholder="0.00">
+                  <label class="form-label" for="pledged_amount">Pledged Amount (&#x20A6;)</label>
+                  <input type="number" id="pledged_amount" name="pledged_amount" class="form-control" step="0.01" min="0.01" placeholder="0.00">
                 </div>
               </div>
 
@@ -109,48 +100,25 @@
                   <label class="form-label" for="estimated_value">Estimated Value (&#x20A6;)</label>
                   <input type="number" id="estimated_value" name="estimated_value" class="form-control" step="0.01" min="0" placeholder="Optional">
                 </div>
-                <div class="form-group" id="updateTreasuryGroup">
-                  <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;">
-                    <input type="checkbox" id="update_treasury" name="update_treasury" class="form-check-input">
-                    Update Treasury?
-                  </label>
-                  <span class="form-help" style="font-size:0.8125rem;color:var(--oya-text-muted);">Material donations only: if enabled, the estimated value is recorded as income.</span>
-                </div>
               </div>
 
-              <div class="form-group" id="paymentMethodGroup">
-                <label class="form-label" for="payment_method">Payment Method</label>
-                <select id="payment_method" name="payment_method" class="form-select"></select>
+              <div class="form-group">
+                <label class="form-label" for="due_date">Due Date</label>
+                <input type="date" id="due_date" name="due_date" class="form-control">
               </div>
               <div class="form-group">
-                <label class="form-label" for="reference_number">Reference Number</label>
-                <input type="text" id="reference_number" name="reference_number" class="form-control" placeholder="Reference / Receipt Number">
+                <label class="form-label" for="notes">Notes</label>
+                <textarea id="notes" name="notes" class="form-control" rows="2" placeholder="Notes..."></textarea>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="receipt">Receipt</label>
-                <input type="file" id="receipt" name="receipt" class="form-control">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="narration">Narration</label>
-                <textarea id="narration" name="narration" class="form-control" rows="2" placeholder="Narration or notes..."></textarea>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="remarks">Remarks</label>
-                <textarea id="remarks" name="remarks" class="form-control" rows="2" placeholder="Remarks..."></textarea>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="donation_date">Donation Date</label>
-                <input type="date" id="donation_date" name="donation_date" class="form-control" required>
-              </div>
-              <div class="form-group">
+              <div class="form-group" id="statusGroup" style="display:none;">
                 <label class="form-label" for="status">Status</label>
                 <select id="status" name="status" class="form-select"></select>
-                <span class="form-help" style="font-size:0.8125rem;color:var(--oya-text-muted);">Pledge: donor has committed but not yet fulfilled. Confirmed: contribution received.</span>
+                <span class="form-help" style="font-size:0.8125rem;color:var(--oya-text-muted);">Editing an existing pledge's status directly overrides its computed status.</span>
               </div>
             </div>
             <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
-              <a href="donations.html" class="btn btn-secondary">Cancel</a>
-              <button type="submit" class="btn btn-primary" id="submitBtn">Save</button>
+              <a href="pledges.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save Pledge</button>
             </div>
           </form>
 
@@ -191,50 +159,43 @@
       document.getElementById("materialFields").style.display = type === "MATERIAL" ? "flex" : "none";
       document.getElementById("labourFields").style.display = type === "LABOUR" ? "flex" : "none";
       document.getElementById("estimatedValueGroup").style.display = (type === "MATERIAL" || type === "LABOUR") ? "flex" : "none";
-      document.getElementById("updateTreasuryGroup").style.display = type === "MATERIAL" ? "" : "none";
-      document.getElementById("paymentMethodGroup").style.display = type === "MONEY" ? "" : "none";
     }
     document.getElementById("donor_type").addEventListener("change", toggleDonorTypeFields);
     document.getElementById("donation_type").addEventListener("change", toggleDonationTypeFields);
 
-    function wireMemberSearch(searchInputId, hiddenInputId, resultsId) {
-      let debounce;
-      document.getElementById(searchInputId).addEventListener("input", (e) => {
-        clearTimeout(debounce);
-        const q = e.target.value.trim();
-        const box = document.getElementById(resultsId);
-        if (q.length < 1) { box.style.display = "none"; return; }
-        debounce = setTimeout(async () => {
-          try {
-            const data = await window.OYA_API.apiFetch(`/accounts/api/users/search/?q=${encodeURIComponent(q)}`);
-            const results = data.results || [];
-            box.innerHTML = results.length
-              ? results.map((r) => `<button type="button" class="dropdown-item" data-id="${r.id}" data-name="${esc(r.full_name)} (${esc(r.serial_number)})" style="width:100%;text-align:left;">${esc(r.full_name)} (${esc(r.serial_number)})</button>`).join("")
-              : `<div class="dropdown-item">No matches</div>`;
-            box.style.display = "";
-            box.querySelectorAll("[data-id]").forEach((btn) => btn.addEventListener("click", () => {
-              document.getElementById(hiddenInputId).value = btn.dataset.id;
-              document.getElementById(searchInputId).value = btn.dataset.name;
-              box.style.display = "none";
-            }));
-          } catch (err) { /* ignore transient search errors */ }
-        }, 300);
-      });
-    }
-    wireMemberSearch("memberSearch", "member", "memberResults");
-    wireMemberSearch("invitedBySearch", "invited_by", "invitedByResults");
+    let searchDebounce;
+    document.getElementById("memberSearch").addEventListener("input", (e) => {
+      clearTimeout(searchDebounce);
+      const q = e.target.value.trim();
+      const box = document.getElementById("memberResults");
+      if (q.length < 1) { box.style.display = "none"; return; }
+      searchDebounce = setTimeout(async () => {
+        try {
+          const data = await window.OYA_API.apiFetch(`/accounts/api/users/search/?q=${encodeURIComponent(q)}`);
+          const results = data.results || [];
+          box.innerHTML = results.length
+            ? results.map((r) => `<button type="button" class="dropdown-item" data-id="${r.id}" data-name="${esc(r.text || r.full_name)}" style="width:100%;text-align:left;">${esc(r.text || r.full_name)}</button>`).join("")
+            : `<div class="dropdown-item">No matches</div>`;
+          box.style.display = "";
+          box.querySelectorAll("[data-id]").forEach((btn) => btn.addEventListener("click", () => {
+            document.getElementById("member").value = btn.dataset.id;
+            document.getElementById("memberSearch").value = btn.dataset.name;
+            box.style.display = "none";
+          }));
+        } catch (err) { /* ignore transient search errors */ }
+      }, 300);
+    });
 
-    document.getElementById("donationForm").addEventListener("submit", async (e) => {
+    document.getElementById("pledgeForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = document.getElementById("submitBtn");
       btn.disabled = true;
       showErrors([]);
-      const formData = new FormData(document.getElementById("donationForm"));
-      if (!document.getElementById("update_treasury").checked) formData.set("update_treasury", "");
+      const formData = new FormData(document.getElementById("pledgeForm"));
       try {
-        const endpoint = isEdit ? `/project-donations/api/donations/${id}/update/` : "/project-donations/api/donations/create/";
+        const endpoint = isEdit ? `/project-donations/api/pledges/${id}/update/` : "/project-donations/api/pledges/create/";
         const data = await window.OYA_API.apiFetch(endpoint, { method: "POST", body: formData });
-        window.location.href = "donations.html";
+        window.location.href = `pledge-detail.html?id=${data.pledge.id}`;
       } catch (err) {
         if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
         else showErrors([err.message || "Something went wrong."]);
@@ -243,11 +204,11 @@
     });
 
     (async function () {
-      const user = await window.OYA_SHELL.init({ page: "donations", title: isEdit ? "Edit Donation" : "Record Donation", requireExecutive: true });
+      const user = await window.OYA_SHELL.init({ page: "pledges", title: isEdit ? "Edit Pledge" : "Record Pledge", requireExecutive: true });
       if (!user) return;
 
       try {
-        const meta = await window.OYA_API.apiFetch("/project-donations/api/donations/form-meta/");
+        const meta = await window.OYA_API.apiFetch("/project-donations/api/pledges/form-meta/");
         const projSel = document.getElementById("project");
         meta.projects.forEach((p) => { const o = document.createElement("option"); o.value = p.id; o.textContent = p.title; projSel.appendChild(o); });
         const donorTypeSel = document.getElementById("donor_type");
@@ -256,8 +217,6 @@
         meta.outside_donors.forEach((d) => { const o = document.createElement("option"); o.value = d.id; o.textContent = d.full_name; outsideSel.appendChild(o); });
         const typeSel = document.getElementById("donation_type");
         meta.donation_type_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; typeSel.appendChild(o); });
-        const paySel = document.getElementById("payment_method");
-        meta.payment_method_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; paySel.appendChild(o); });
         const statusSel = document.getElementById("status");
         meta.status_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; statusSel.appendChild(o); });
 
@@ -265,38 +224,29 @@
         toggleDonationTypeFields();
 
         if (isEdit) {
-          document.getElementById("formTitle").textContent = "Edit Donation";
-          const { donation } = await window.OYA_API.apiFetch(`/project-donations/api/donations/${id}/`);
-          if (donation.project) projSel.value = donation.project.id;
-          donorTypeSel.value = donation.donor_type;
-          if (donation.donor_type === "MEMBER" && donation.member) {
-            document.getElementById("member").value = donation.member.id;
-            document.getElementById("memberSearch").value = donation.member.full_name;
-          } else if (donation.donor_type === "OUTSIDE" && donation.outside_donor) {
-            outsideSel.value = donation.outside_donor.id;
+          document.getElementById("formTitle").textContent = "Edit Pledge";
+          document.getElementById("statusGroup").style.display = "";
+          const { pledge } = await window.OYA_API.apiFetch(`/project-donations/api/pledges/${id}/`);
+          if (pledge.project) projSel.value = pledge.project.id;
+          donorTypeSel.value = pledge.donor_type;
+          typeSel.value = pledge.donation_type;
+          if (pledge.donor_type === "MEMBER" && pledge.donor) {
+            document.getElementById("member").value = pledge.donor.id;
+            document.getElementById("memberSearch").value = pledge.donor.full_name;
+          } else if (pledge.donor_type === "OUTSIDE" && pledge.donor) {
+            outsideSel.value = pledge.donor.id;
           }
-          if (donation.invited_by) {
-            document.getElementById("invited_by").value = donation.invited_by.id;
-            document.getElementById("invitedBySearch").value = donation.invited_by.full_name;
-          }
-          typeSel.value = donation.donation_type;
-          document.getElementById("amount").value = donation.amount || "";
-          document.getElementById("material_name").value = donation.material_name || "";
-          document.getElementById("quantity").value = donation.quantity || "";
-          document.getElementById("labour_type").value = donation.labour_type || "";
-          document.getElementById("number_of_days").value = donation.number_of_days || "";
-          document.getElementById("estimated_value").value = donation.estimated_value || "";
-          document.getElementById("update_treasury").checked = !!donation.update_treasury;
-          document.getElementById("narration").value = donation.narration || "";
-          document.getElementById("remarks").value = donation.remarks || "";
-          paySel.value = donation.payment_method;
-          document.getElementById("reference_number").value = donation.reference_number || "";
-          statusSel.value = donation.status;
-          document.getElementById("donation_date").value = donation.donation_date;
+          document.getElementById("pledged_amount").value = pledge.pledged_amount || "";
+          document.getElementById("material_name").value = pledge.material_name || "";
+          document.getElementById("quantity").value = pledge.quantity || "";
+          document.getElementById("labour_type").value = pledge.labour_type || "";
+          document.getElementById("number_of_days").value = pledge.number_of_days || "";
+          document.getElementById("estimated_value").value = pledge.estimated_value || "";
+          document.getElementById("due_date").value = pledge.due_date || "";
+          document.getElementById("notes").value = pledge.notes || "";
+          statusSel.value = pledge.status;
           toggleDonorTypeFields();
           toggleDonationTypeFields();
-        } else {
-          document.getElementById("donation_date").value = new Date().toISOString().slice(0, 10);
         }
       } catch (err) {
         showErrors([err.message || "Couldn't load the form."]);

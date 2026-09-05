@@ -28,4 +28,5 @@ urlpatterns = [
     path("api/dues/prepaid/", api.prepaid_list_api, name="prepaid_list_api"),
     path("api/dues/prepaid/<int:member_id>/", api.prepaid_detail_api, name="prepaid_detail_api"),
     path("api/dues/debtors/", api.dues_debtors_list_api, name="dues_debtors_list_api"),
+    path("api/summary/", api.finance_summary_api, name="finance_summary_api"),
 ]

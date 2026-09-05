@@ -48,4 +48,15 @@ urlpatterns = [
     path("api/donations/<int:pk>/delete/", api.donation_delete_api, name="donation_delete_api"),
     path("api/donations/<int:pk>/fulfill/", api.donation_fulfill_api, name="donation_fulfill_api"),
     path("api/donations/<int:pk>/cancel-pledge/", api.donation_cancel_pledge_api, name="donation_cancel_pledge_api"),
+
+    path("api/pledges/list/", api.pledge_list_api, name="pledge_list_api"),
+    path("api/pledges/form-meta/", api.pledge_form_meta_api, name="pledge_form_meta_api"),
+    path("api/pledges/create/", api.pledge_create_api, name="pledge_create_api"),
+    path("api/pledges/<int:pk>/", api.pledge_detail_api, name="pledge_detail_api"),
+    path("api/pledges/<int:pk>/update/", api.pledge_update_api, name="pledge_update_api"),
+    path("api/pledges/<int:pk>/delete/", api.pledge_delete_api, name="pledge_delete_api"),
+    path("api/pledges/<int:pk>/payments/create/", api.pledge_payment_create_api, name="pledge_payment_create_api"),
+    path("api/pledges/<int:pk>/payments/<int:payment_pk>/delete/", api.pledge_payment_delete_api, name="pledge_payment_delete_api"),
+    path("api/pledges/<int:pk>/fulfill/", api.pledge_fulfill_api, name="pledge_fulfill_api"),
+    path("api/pledges/<int:pk>/cancel/", api.pledge_cancel_api, name="pledge_cancel_api"),
 ]

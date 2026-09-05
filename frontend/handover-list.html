@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <title>Handover Ledger | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h1 style="font-size:clamp(1.125rem, 3vw, 1.5rem);">Handover Ledger</h1>
+              <p style="font-size:clamp(0.75rem, 2vw, 0.875rem);">Executive transition records — finances and assets handed over at the end of each tenure</p>
+            </div>
+          </div>
+
+          <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+            <div class="kpi-card"><div class="kpi-value" id="kpiTotal">&mdash;</div><div class="kpi-label">Total Handovers</div></div>
+            <div class="kpi-card accent-success"><div class="kpi-value" style="color:var(--oya-success);" id="kpiCash">&mdash;</div><div class="kpi-label">Total Cash Remaining</div></div>
+            <div class="kpi-card accent-info"><div class="kpi-value" style="color:var(--oya-info);" id="kpiRevenue">&mdash;</div><div class="kpi-label">Total Revenue Recorded</div></div>
+          </div>
+
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="toolbar-search">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="searchInput" placeholder="Search by executive, post, or election...">
+              </div>
+            </div>
+            <div class="table-container" style="overflow-x:auto;">
+              <table class="data-table" style="white-space:nowrap;">
+                <thead><tr><th>Outgoing Executive</th><th>Post</th><th>Election</th><th>Tenure</th><th>Cash Remaining</th><th>Total Revenue</th><th style="width:60px;"></th></tr></thead>
+                <tbody id="tbody"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">Loading&hellip;</td></tr></tbody>
+              </table>
+            </div>
+            <div class="card-footer" id="paginationFooter" style="display:none;">
+              <span style="font-size:0.8125rem;color:var(--oya-text-muted);" id="paginationSummary"></span>
+              <div class="pagination" id="paginationControls"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+    const state = { search: "", page: 1 };
+
+    function renderRow(h) {
+      const tenure = h.tenure_start ? `${h.tenure_start} \u2192 ${h.tenure_end || "Present"}` : "\u2014";
+      const totalRevenue = (Number(h.total_income) || 0) + (Number(h.total_dues) || 0) + (Number(h.total_donations) || 0) + (Number(h.taskforce_revenue) || 0);
+      return `<tr>
+        <td><span class="cell-name">${h.executive ? esc(h.executive.full_name) : "\u2014"}</span></td>
+        <td class="cell-muted">${h.executive ? esc(h.executive.post) : "\u2014"}</td>
+        <td class="cell-muted">${h.election ? esc(h.election.title) : "Founding"}</td>
+        <td class="cell-muted">${esc(tenure)}</td>
+        <td style="font-weight:600;color:var(--oya-success);">${naira(h.cash_remaining)}</td>
+        <td style="font-weight:600;">${naira(totalRevenue)}</td>
+        <td>
+          <button type="button" class="table-action-btn" disabled title="Full handover detail view is coming in a future update" style="opacity:0.4;cursor:not-allowed;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </td>
+      </tr>`;
+    }
+
+    function renderPagination(p) {
+      const footer = document.getElementById("paginationFooter");
+      if (p.num_pages <= 1) { footer.style.display = "none"; return; }
+      footer.style.display = "";
+      document.getElementById("paginationSummary").textContent = `Page ${p.page} of ${p.num_pages} \u00b7 ${p.count} handovers`;
+      const controls = document.getElementById("paginationControls");
+      let html = "";
+      for (let n = 1; n <= p.num_pages; n++) html += n === p.page ? `<button class="page-btn active">${n}</button>` : `<a href="#" class="page-btn" data-page="${n}">${n}</a>`;
+      controls.innerHTML = html;
+      controls.querySelectorAll("[data-page]").forEach((el) => el.addEventListener("click", (e) => { e.preventDefault(); state.page = parseInt(el.dataset.page, 10); load(); }));
+    }
+
+    async function load() {
+      const qs = new URLSearchParams();
+      if (state.search) qs.set("search", state.search);
+      qs.set("page", state.page);
+      const tbody = document.getElementById("tbody");
+      try {
+        const data = await window.OYA_API.apiFetch(`/elections/api/handovers/list/?${qs.toString()}`);
+        document.getElementById("kpiTotal").textContent = data.stats.total;
+        document.getElementById("kpiCash").textContent = naira(data.stats.total_cash_remaining);
+        document.getElementById("kpiRevenue").textContent = naira(data.stats.total_revenue);
+        tbody.innerHTML = data.results.length ? data.results.map(renderRow).join("") : `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No handover records yet.</td></tr>`;
+        renderPagination(data);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-danger);">Couldn't load: ${esc(err.message)}</td></tr>`;
+      }
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "handover", title: "Handover Ledger" });
+      if (!user) return;
+
+      let debounce;
+      document.getElementById("searchInput").addEventListener("input", (e) => { clearTimeout(debounce); debounce = setTimeout(() => { state.search = e.target.value.trim(); state.page = 1; load(); }, 350); });
+
+      load();
+    })();
+  </script>
+</body>
+</html>

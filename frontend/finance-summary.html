@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <title>Finance Summary | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+          <div id="loadingState" style="text-align:center;padding:3rem;color:var(--oya-text-muted);">Loading&hellip;</div>
+          <div id="detailContent" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
+    function fmtDateTime(iso) {
+      if (!iso) return "\u2014";
+      const dt = new Date(iso);
+      if (isNaN(dt)) return "\u2014";
+      return dt.toLocaleString("en-US", { month: "short", day: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit" });
+    }
+
+    function transactionRow(t) {
+      let icon, iconClass, title, badge, href = null;
+      if (t.type === "dues_transaction") {
+        iconClass = "warning";
+        icon = '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>';
+        title = `${esc(t.member || "Unknown")} \u2014 ${naira(t.amount)} \u2014 ${esc(t.description)}`;
+        badge = `<span class="badge badge-warning" style="margin-left:0.5rem;">Yearly Dues</span>${t.is_prepaid ? ' <span class="badge badge-info">Prepaid</span>' : ""}`;
+        if (t.member_id) href = `member-dues-detail.html?id=${t.member_id}`;
+      } else if (t.type === "income") {
+        iconClass = "success";
+        icon = '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>';
+        title = `${esc(t.member || "Anonymous")} \u2014 ${naira(t.amount)} \u2014 ${esc(t.description)}`;
+        badge = `<span class="badge badge-success" style="margin-left:0.5rem;">${esc(t.income_type || "")}</span>`;
+      } else if (t.type === "expense") {
+        iconClass = "danger";
+        icon = '<polyline points="17 18 23 18 23 12"/><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>';
+        title = `${naira(t.amount)} \u2014 ${esc(t.description)}`;
+        badge = `<span class="badge badge-danger" style="margin-left:0.5rem;">${esc(t.category || "")}</span>`;
+      } else {
+        iconClass = "info";
+        icon = '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>';
+        title = `${esc(t.member || "Anonymous")} \u2014 ${naira(t.amount)} \u2014 ${esc(t.description)}`;
+        badge = `<span class="badge badge-info" style="margin-left:0.5rem;">Project Donation</span>`;
+        if (t.project_id) href = `project-detail.html?id=${t.project_id}`;
+      }
+      const tag = href ? "a" : "div";
+      const hrefAttr = href ? `href="${href}"` : "";
+      return `
+      <${tag} ${hrefAttr} class="activity-item" style="${href ? "cursor:pointer;text-decoration:none;color:inherit;" : ""}display:flex;">
+        <div class="activity-icon ${iconClass}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg></div>
+        <div class="activity-content">
+          <div class="activity-text" style="flex-wrap:wrap;gap:0.25rem;">${title}${badge}</div>
+          <div class="activity-time">${fmtDateTime(t.created_at)}</div>
+        </div>
+      </${tag}>`;
+    }
+
+    function render(d) {
+      return `
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1 style="font-size:clamp(1.125rem,3vw,1.5rem);">Finance Summary</h1>
+          <p style="font-size:0.875rem;color:var(--oya-text-muted);">Full financial breakdown and recent activity</p>
+        </div>
+        <div class="page-header-actions"><a href="finance.html" class="btn btn-secondary">Back to Overview</a></div>
+      </div>
+
+      <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+        <div class="kpi-card"><div class="kpi-value">${naira(d.treasury_balance)}</div><div class="kpi-label">Treasury Balance</div></div>
+        <div class="kpi-card accent-success"><div class="kpi-value" style="color:var(--oya-success);">${naira(d.total_income)}</div><div class="kpi-label">Total Income</div></div>
+        <div class="kpi-card accent-danger"><div class="kpi-value" style="color:var(--oya-danger);">${naira(d.total_expenses)}</div><div class="kpi-label">Total Expenses</div></div>
+        <div class="kpi-card accent-info"><div class="kpi-value" style="color:var(--oya-info);">${d.dues_collection_rate}%</div><div class="kpi-label">Dues Collection Rate</div></div>
+      </div>
+
+      <div class="dashboard-grid dashboard-grid-4" style="margin-bottom:1.5rem;">
+        <div class="kpi-card"><div class="kpi-value">${naira(d.total_dues)}</div><div class="kpi-label">Total Dues Collected</div></div>
+        <div class="kpi-card"><div class="kpi-value">${naira(d.total_donations)}</div><div class="kpi-label">Total Donations</div></div>
+        <div class="kpi-card"><div class="kpi-value">${d.this_year_dues_paid} / ${d.active_members}</div><div class="kpi-label">Members Paid ${d.current_year} Dues (${d.this_year_dues_rate}%)</div></div>
+        <div class="kpi-card"><div class="kpi-value">${d.total_transactions}</div><div class="kpi-label">Total Transactions</div></div>
+      </div>
+
+      <div class="dashboard-grid dashboard-grid-2" style="margin-bottom:1.5rem;">
+        <div class="card">
+          <div class="card-header"><div><div class="card-header-title">Expenses by Category</div></div></div>
+          <div class="card-body">
+            ${d.expenses_by_category.length ? d.expenses_by_category.map((c) => `
+              <div style="margin-bottom:1rem;">
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:0.375rem;">
+                  <span>${esc(c.category)}</span><span style="font-weight:600;">${naira(c.total)} (${c.percentage}%)</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill danger" style="width:${c.percentage}%;"></div></div>
+              </div>`).join("") : `<p style="color:var(--oya-text-muted);text-align:center;padding:1rem;">No expenses recorded yet.</p>`}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div><div class="card-header-title">Donations by Project</div></div></div>
+          <div class="card-body">
+            ${d.donations_by_project.length ? d.donations_by_project.map((p) => {
+              const pct = d.total_project_donations > 0 ? Math.round((Number(p.total) / Number(d.total_project_donations)) * 1000) / 10 : 0;
+              return `
+              <div style="margin-bottom:1rem;">
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:0.375rem;">
+                  <span>${esc(p.project__title || "General")} <span style="color:var(--oya-text-muted);">(${p.count})</span></span><span style="font-weight:600;">${naira(p.total)}</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;"></div></div>
+              </div>`;
+            }).join("") : `<p style="color:var(--oya-text-muted);text-align:center;padding:1rem;">No project donations recorded yet.</p>`}
+            <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--oya-border);font-size:0.8125rem;color:var(--oya-text-muted);display:flex;flex-direction:column;gap:0.25rem;">
+              <span>Member-donated: <strong style="color:var(--oya-text-primary);">${naira(d.total_member_project_donations)}</strong></span>
+              <span>Outside-donated: <strong style="color:var(--oya-text-primary);">${naira(d.total_outside_project_donations)}</strong> (${d.total_outside_donors_count} donor${d.total_outside_donors_count === 1 ? "" : "s"})</span>
+              <span>Raised through invitees: <strong style="color:var(--oya-text-primary);">${naira(d.total_raised_through_invitees)}</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid dashboard-grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-header-title">Recent Transactions</div><div class="card-header-subtitle">Latest financial activities</div></div>
+            <a href="contributions.html" class="btn btn-sm btn-ghost">View All</a>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="activity-feed" style="padding:0 1.25rem;">
+              ${d.recent_transactions.length ? d.recent_transactions.map(transactionRow).join("") : `<p style="color:var(--oya-text-muted);text-align:center;padding:1.5rem;">No recent activity.</p>`}
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-header-title">Top Debtors</div><div class="card-header-subtitle">Members with the highest outstanding dues</div></div>
+            <a href="dues-debtors.html" class="btn btn-sm btn-ghost">View All</a>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="activity-feed" style="padding:0 1.25rem;">
+              ${d.top_debtors.length ? d.top_debtors.map((deb) => `
+                <a href="member-dues-detail.html?id=${deb.member.id}" class="activity-item" style="text-decoration:none;color:inherit;">
+                  <div class="activity-icon danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+                  <div class="activity-content">
+                    <div class="activity-text"><strong>${esc(deb.member.full_name)}</strong></div>
+                    <div class="activity-time">${deb.years_missed} year${deb.years_missed === 1 ? "" : "s"} missed</div>
+                  </div>
+                  <span class="badge badge-danger">${naira(deb.debt)}</span>
+                </a>`).join("") : `<p style="color:var(--oya-text-muted);text-align:center;padding:1.5rem;">No outstanding debtors \u2014 everyone is paid up!</p>`}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1.5rem;">
+        <div class="card-body" style="display:flex;flex-wrap:wrap;gap:1.5rem;font-size:0.8125rem;color:var(--oya-text-muted);">
+          <span>Partial payments: <strong style="color:var(--oya-text-primary);">${d.partial_payments}</strong></span>
+          <span>Prepaid years: <strong style="color:var(--oya-text-primary);">${d.prepaid_count}</strong> (${naira(d.total_prepaid)})</span>
+        </div>
+      </div>`;
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "finance", title: "Finance Summary" });
+      if (!user) return;
+      try {
+        const data = await window.OYA_API.apiFetch("/finance/api/summary/");
+        document.getElementById("detailContent").innerHTML = render(data);
+        document.getElementById("loadingState").style.display = "none";
+        document.getElementById("detailContent").style.display = "";
+      } catch (err) {
+        document.getElementById("loadingState").innerHTML = `<div class="alert alert-danger">Couldn't load the finance summary \u2014 these figures are not reliable right now: ${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

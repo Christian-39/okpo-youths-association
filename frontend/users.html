@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <title>Users | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+
+          <div class="page-header">
+            <div class="page-header-left">
+              <h1 style="font-size:clamp(1.125rem, 3vw, 1.5rem);">Users</h1>
+              <p style="font-size:clamp(0.75rem, 2vw, 0.875rem);">Every account with system access &mdash; members, executives, and admins</p>
+            </div>
+            <div class="page-header-actions">
+              <button type="button" class="btn btn-secondary" id="pinResetBtn" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Reset PIN
+              </button>
+              <a href="user-form.html" class="btn btn-primary" id="addBtn" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Create Admin
+              </a>
+            </div>
+          </div>
+
+          <div class="filters-bar" style="flex-wrap:wrap;gap:0.5rem;">
+            <div class="filter-group">
+              <span class="filter-label" style="font-size:0.75rem;">Role:</span>
+              <select id="roleFilter" class="form-control" style="width:160px;"><option value="">All Roles</option></select>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="table-toolbar">
+              <div class="toolbar-search">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="searchInput" placeholder="Search by name, serial no., phone, state...">
+              </div>
+            </div>
+            <div class="table-container" style="overflow-x:auto;">
+              <table class="data-table" style="white-space:nowrap;">
+                <thead><tr><th>Serial No.</th><th>Name</th><th>Phone</th><th>State</th><th>Role</th><th>Status</th><th style="width:90px;">Actions</th></tr></thead>
+                <tbody id="tbody"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">Loading&hellip;</td></tr></tbody>
+              </table>
+            </div>
+            <div class="card-footer" id="paginationFooter" style="display:none;">
+              <span style="font-size:0.8125rem;color:var(--oya-text-muted);" id="paginationSummary"></span>
+              <div class="pagination" id="paginationControls"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <!-- PIN reset modal -->
+  <div class="modal-overlay" id="pinModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;">
+    <div class="modal" style="background:var(--oya-bg-card, #fff);border-radius:var(--oya-radius, 12px);max-width:420px;width:90%;">
+      <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;padding:1.25rem;border-bottom:1px solid var(--oya-border);">
+        <h3 style="margin:0;font-size:1rem;">Reset User PIN</h3>
+        <button type="button" id="closePinModalBtn" class="btn btn-sm btn-ghost">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:1.25rem;">
+        <div id="pinFormErrors" style="display:none;margin-bottom:1rem;"></div>
+        <form id="pinResetForm">
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label">Serial Number</label>
+            <input type="text" name="serial_number" class="form-control" placeholder="OYA-2026-0001" required>
+          </div>
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label">New PIN</label>
+            <input type="password" name="new_pin" class="form-control" maxlength="6" minlength="6" inputmode="numeric" placeholder="New 6-digit PIN" required>
+          </div>
+          <div class="form-group" style="margin-bottom:1.25rem;">
+            <label class="form-label">Confirm New PIN</label>
+            <input type="password" name="confirm_pin" class="form-control" maxlength="6" minlength="6" inputmode="numeric" placeholder="Confirm new PIN" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;" id="pinResetSubmit">Reset PIN</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    const state = { search: "", role: "", page: 1 };
+    let isAdmin = false, isExecutive = false, choicesBuilt = false;
+
+    function roleBadge(u) {
+      if (u.role === "ADMIN") return `<span class="badge badge-danger">Admin</span>`;
+      if (u.role === "EXECUTIVE") return `<span class="badge badge-primary">${esc(u.display_role)}</span>`;
+      return `<span class="badge badge-secondary">Floor Member</span>`;
+    }
+
+    function renderRow(u) {
+      return `<tr>
+        <td class="cell-muted">${esc(u.serial_number)}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            ${u.photo_url ? `<img src="${esc(u.photo_url)}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">` : `<div class="avatar" style="width:28px;height:28px;font-size:0.6875rem;">${esc((u.full_name||"?").trim().split(/\s+/).map(p=>p[0]).slice(0,2).join("").toUpperCase())}</div>`}
+            <span class="cell-name">${esc(u.full_name)}</span>
+          </div>
+        </td>
+        <td class="cell-muted">${esc(u.phone || "\u2014")}</td>
+        <td class="cell-muted">${esc(u.state || "\u2014")}</td>
+        <td>${roleBadge(u)}</td>
+        <td>${u.is_active === false ? '<span class="badge badge-secondary">Inactive</span>' : '<span class="badge badge-success">Active</span>'}</td>
+        <td>
+          <div class="table-actions" style="flex-wrap:nowrap;gap:0.25rem;">
+            <a href="user-detail.html?id=${u.id}" class="table-action-btn" title="View"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
+            ${(isExecutive || isAdmin) ? `<a href="user-form.html?id=${u.id}" class="table-action-btn" title="Edit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></a>` : ""}
+            ${isAdmin ? `<button type="button" class="table-action-btn danger js-delete" data-id="${u.id}" data-serial="${esc(u.serial_number)}" title="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ""}
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    function renderPagination(p) {
+      const footer = document.getElementById("paginationFooter");
+      if (p.num_pages <= 1) { footer.style.display = "none"; return; }
+      footer.style.display = "";
+      document.getElementById("paginationSummary").textContent = `Page ${p.page} of ${p.num_pages} \u00b7 ${p.count} users`;
+      const controls = document.getElementById("paginationControls");
+      let html = "";
+      for (let n = 1; n <= p.num_pages; n++) html += n === p.page ? `<button class="page-btn active">${n}</button>` : `<a href="#" class="page-btn" data-page="${n}">${n}</a>`;
+      controls.innerHTML = html;
+      controls.querySelectorAll("[data-page]").forEach((el) => el.addEventListener("click", (e) => { e.preventDefault(); state.page = parseInt(el.dataset.page, 10); load(); }));
+    }
+
+    async function load() {
+      const qs = new URLSearchParams();
+      if (state.search) qs.set("search", state.search);
+      if (state.role) qs.set("role", state.role);
+      qs.set("page", state.page);
+      const tbody = document.getElementById("tbody");
+      try {
+        const data = await window.OYA_API.apiFetch(`/accounts/api/users/?${qs.toString()}`);
+        if (!choicesBuilt) {
+          choicesBuilt = true;
+          const sel = document.getElementById("roleFilter");
+          data.role_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; sel.appendChild(o); });
+        }
+        tbody.innerHTML = data.results.length ? data.results.map(renderRow).join("") : `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No users found.</td></tr>`;
+        renderPagination(data);
+        document.querySelectorAll(".js-delete").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            if (!confirm(`Delete user ${btn.dataset.serial}? This cannot be undone.`)) return;
+            try {
+              await window.OYA_API.apiFetch(`/accounts/api/users/${btn.dataset.id}/delete/`, { method: "POST" });
+              window.OYA.showToast("User deleted.", "success");
+              load();
+            } catch (err) {
+              window.OYA.showToast(err.message || "Couldn't delete user.", "error");
+            }
+          });
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-danger);">Couldn't load: ${esc(err.message)}</td></tr>`;
+      }
+    }
+
+    function showPinErrors(errors) {
+      const box = document.getElementById("pinFormErrors");
+      const lines = Array.isArray(errors) ? errors : [String(errors)];
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "users", title: "Users" });
+      if (!user) return;
+      isAdmin = !!user.has_admin_access;
+      isExecutive = !!user.has_executive_access;
+      if (isExecutive) document.getElementById("addBtn").style.display = "";
+      if (isAdmin) document.getElementById("pinResetBtn").style.display = "";
+
+      let debounce;
+      document.getElementById("searchInput").addEventListener("input", (e) => { clearTimeout(debounce); debounce = setTimeout(() => { state.search = e.target.value.trim(); state.page = 1; load(); }, 350); });
+      document.getElementById("roleFilter").addEventListener("change", (e) => { state.role = e.target.value; state.page = 1; load(); });
+
+      document.getElementById("pinResetBtn").addEventListener("click", () => { document.getElementById("pinModalOverlay").style.display = "flex"; });
+      document.getElementById("closePinModalBtn").addEventListener("click", () => { document.getElementById("pinModalOverlay").style.display = "none"; });
+      document.getElementById("pinModalOverlay").addEventListener("click", (e) => { if (e.target.id === "pinModalOverlay") e.currentTarget.style.display = "none"; });
+
+      document.getElementById("pinResetForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("pinResetSubmit");
+        btn.disabled = true;
+        showPinErrors([]);
+        try {
+          const formData = new FormData(e.target);
+          const res = await window.OYA_API.apiFetch("/accounts/api/users/pin-reset/", { method: "POST", body: formData });
+          window.OYA.showToast(res.detail || "PIN reset.", "success");
+          document.getElementById("pinModalOverlay").style.display = "none";
+          e.target.reset();
+        } catch (err) {
+          showPinErrors((err.data && err.data.errors) || [err.message || "Something went wrong."]);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>

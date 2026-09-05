@@ -64,8 +64,12 @@
                 <input type="text" id="occupation" name="occupation" class="form-control">
               </div>
               <div class="form-group">
-                <label class="form-label" for="invited_by">Invited By</label>
-                <select id="invited_by" name="invited_by" class="form-select" required><option value="">Search member who invited this donor…</option></select>
+                <label class="form-label">Invited By</label>
+                <div style="position:relative;">
+                  <input type="text" id="invitedBySearch" class="form-input" placeholder="Search member who invited this donor…" autocomplete="off" required>
+                  <input type="hidden" id="invited_by" name="invited_by">
+                  <div id="invitedByResults" class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;z-index:10;"></div>
+                </div>
               </div>
               <div class="form-group">
                 <label class="form-label" for="notes">Notes</label>
@@ -131,11 +135,31 @@
     (async function () {
       const user = await window.OYA_SHELL.init({ page: "outside-donors", title: isEdit ? "Edit Outside Donor" : "Add Outside Donor", requireExecutive: true });
       if (!user) return;
-      try {
-        const meta = await window.OYA_API.apiFetch("/project-donations/api/outside-donors/form-meta/");
-        const sel = document.getElementById("invited_by");
-        meta.members.forEach((m) => { const o = document.createElement("option"); o.value = m.id; o.textContent = `${m.full_name} (${m.serial_number})`; sel.appendChild(o); });
 
+      let debounce;
+      document.getElementById("invitedBySearch").addEventListener("input", (e) => {
+        clearTimeout(debounce);
+        const q = e.target.value.trim();
+        const box = document.getElementById("invitedByResults");
+        if (q.length < 1) { box.style.display = "none"; return; }
+        debounce = setTimeout(async () => {
+          try {
+            const data = await window.OYA_API.apiFetch(`/accounts/api/users/search/?q=${encodeURIComponent(q)}`);
+            const results = data.results || [];
+            box.innerHTML = results.length
+              ? results.map((r) => `<button type="button" class="dropdown-item" data-id="${r.id}" data-name="${esc(r.full_name)} (${esc(r.serial_number)})" style="width:100%;text-align:left;">${esc(r.full_name)} (${esc(r.serial_number)})</button>`).join("")
+              : `<div class="dropdown-item">No matches</div>`;
+            box.style.display = "";
+            box.querySelectorAll("[data-id]").forEach((btn) => btn.addEventListener("click", () => {
+              document.getElementById("invited_by").value = btn.dataset.id;
+              document.getElementById("invitedBySearch").value = btn.dataset.name;
+              box.style.display = "none";
+            }));
+          } catch (err) { /* ignore transient search errors */ }
+        }, 300);
+      });
+
+      try {
         if (isEdit) {
           document.getElementById("formTitle").textContent = "Edit Outside Donor";
           const { donor } = await window.OYA_API.apiFetch(`/project-donations/api/outside-donors/${id}/`);
@@ -145,7 +169,10 @@
           document.getElementById("gender").value = donor.gender || "";
           document.getElementById("occupation").value = donor.occupation || "";
           document.getElementById("notes").value = donor.notes || "";
-          if (donor.invited_by) sel.value = donor.invited_by.id;
+          if (donor.invited_by) {
+            document.getElementById("invited_by").value = donor.invited_by.id;
+            document.getElementById("invitedBySearch").value = donor.invited_by.full_name;
+          }
           if (donor.profile_picture_url) { document.getElementById("photoPreview").src = donor.profile_picture_url; document.getElementById("photoPreview").style.display = ""; }
         }
       } catch (err) {

@@ -273,11 +273,18 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SESSION_COOKIE_AGE = 86400
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
-if DEBUG:
-    SESSION_ENGINE = "django.contrib.sessions.backends.db"
-else:
+# ── Redis-aware session / cache / Celery ──────────────────────
+# Production used to hard-code Redis, which crashed on Render when
+# REDIS_URL wasn't set. Now everything falls back gracefully.
+_REDIS_URL = config("REDIS_URL", default="")
+_CELERY_BROKER = config("CELERY_BROKER_URL", default="")
+_CELERY_BACKEND = config("CELERY_RESULT_BACKEND", default="")
+
+if _REDIS_URL:
     SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
     SESSION_CACHE_ALIAS = "default"
+else:
+    SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
 # Login settings
 LOGIN_URL = "/accounts/api/login/"
@@ -343,20 +350,12 @@ LOGGING = {
     },
 }
 
-# Cache settings — Redis in production, LocMemCache locally (no Redis server needed)
-if DEBUG:
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "oya-local-cache",
-            "TIMEOUT": 300,
-        }
-    }
-else:
+# Cache settings — Redis if available, LocMemCache otherwise
+if _REDIS_URL:
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": config("REDIS_URL", default="redis://localhost:6379/1"),
+            "LOCATION": _REDIS_URL,
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
                 "SOCKET_CONNECT_TIMEOUT": 5,
@@ -365,10 +364,25 @@ else:
             "TIMEOUT": 300,
         }
     }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "oya-local-cache",
+            "TIMEOUT": 300,
+        }
+    }
 
-# Celery settings
-CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default="redis://localhost:6379/0")
+# Celery settings — Redis if available, otherwise run tasks synchronously
+if _CELERY_BROKER:
+    CELERY_BROKER_URL = _CELERY_BROKER
+    CELERY_RESULT_BACKEND = _CELERY_BACKEND or _CELERY_BROKER
+else:
+    CELERY_BROKER_URL = "memory://"
+    CELERY_RESULT_BACKEND = "cache"
+    CELERY_CACHE_BACKEND = "default"
+    CELERY_TASK_ALWAYS_EAGER = True
+
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

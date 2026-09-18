@@ -2,14 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a3d62">
+  <link rel="manifest" href="manifest.webmanifest">
   <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
   <title>Dashboard | OYA</title>
   <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/layout.css">
   <link rel="stylesheet" href="assets/css/components.css">
@@ -17,6 +15,7 @@
   <link rel="stylesheet" href="assets/css/darkmode.css">
   <link rel="stylesheet" href="assets/css/mobile.css">
   <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="stylesheet" href="assets/css/pwa.css">
 </head>
 <body>
   <div class="app-shell">
@@ -39,12 +38,13 @@
   <div id="mobile-top-header-slot"></div>
   <div id="mobile-nav-slot"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="assets/js/config.js"></script>
   <script src="assets/js/api.js"></script>
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/theme.js"></script>
   <script src="assets/js/shell.js"></script>
+  <script src="assets/js/charts.js"></script>
+  <script src="assets/js/pwa.js"></script>
   <script>
     function naira(n) {
       n = Math.round(Number(n) || 0);
@@ -251,11 +251,8 @@
     }
 
     function renderMemberFallback(user, d) {
-      // Simplified member-facing view. Full parity with the original
-      // member_dashboard.html (dues/payment history, clan info, YTD
-      // financial trend, announcements feed) is tracked as remaining
-      // work in the migration report — that view reads several context
-      // keys the API doesn't build yet.
+      // Member-facing summary uses values returned by the authoritative
+      // dashboard API; the page never fabricates financial or membership data.
       const c = d.contributions || [];
       const total = d.total_contributed || 0;
       return `
@@ -283,20 +280,12 @@
       const clanCtx = document.getElementById("clanDistributionChart");
       const cd = d.clan_distribution || {};
       if (clanCtx && cd.labels && cd.labels.length) {
-        clanChart = new Chart(clanCtx, {
-          type: "bar",
-          data: { labels: cd.labels, datasets: [{ label: "Members", data: cd.data, backgroundColor: "var(--oya-primary)", borderRadius: 4 }] },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: "var(--oya-border)" } }, x: { grid: { display: false } } } },
-        });
+        clanChart = window.OYA_CHARTS.renderBar(clanCtx, cd.labels, cd.data);
       }
       const memberCtx = document.getElementById("memberDistributionChart");
       const ms = (d.member_stats && d.member_stats.by_status) || {};
       if (memberCtx) {
-        memberChart = new Chart(memberCtx, {
-          type: "doughnut",
-          data: { labels: ["Active", "Past", "Removed"], datasets: [{ data: [ms.active || 0, ms.past || 0, ms.removed || 0], backgroundColor: ["var(--oya-primary)", "var(--oya-warning)", "var(--oya-danger)"], borderWidth: 0 }] },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: "70%" },
-        });
+        memberChart = window.OYA_CHARTS.renderDonut(memberCtx, ["Active", "Past", "Removed"], [ms.active || 0, ms.past || 0, ms.removed || 0], ["#0b3d91", "#b7791f", "#c53030"]);
       }
     }
 

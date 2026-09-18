@@ -1,9 +1,9 @@
-# settings.py / requirements.txt changes
+# settings.py / requirements.txt reference (already applied)
 
-The project currently has **no API layer and no CORS configuration** —
-this is new, and is the one genuinely new dependency this migration
-requires (per the "no unnecessary dependencies" rule, everything else
-reuses what's already installed).
+This file is retained as a historical configuration reference. The current
+`oya/settings.py` and `requirements.txt` already include the API, CORS, secure
+cookie, health/version, and environment configuration. Apply only the
+explicit production environment values; do not duplicate these snippets.
 
 ## 1. requirements.txt — add one line
 

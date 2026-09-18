@@ -1,7 +1,9 @@
-# URL wiring — additive changes only
+# URL wiring reference (already applied)
 
-For each file below, add the two marked lines. Nothing existing is
-removed, renamed, or reordered.
+This file is retained as a historical route reference. The destination
+repository already contains the imports and URL patterns described below;
+do not copy these snippets a second time. For the current source of truth,
+inspect each app's `urls.py` and `MIGRATION_REPORT.md`.
 
 ## accounts/urls.py
 

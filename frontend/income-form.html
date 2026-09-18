@@ -2,14 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a3d62">
+  <link rel="manifest" href="manifest.webmanifest">
   <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
   <title>Record Contribution | OYA</title>
   <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/layout.css">
   <link rel="stylesheet" href="assets/css/components.css">
@@ -17,6 +15,7 @@
   <link rel="stylesheet" href="assets/css/darkmode.css">
   <link rel="stylesheet" href="assets/css/mobile.css">
   <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="stylesheet" href="assets/css/pwa.css">
 </head>
 <body>
   <div class="app-shell">
@@ -90,6 +89,7 @@
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/theme.js"></script>
   <script src="assets/js/shell.js"></script>
+  <script src="assets/js/pwa.js"></script>
   <script>
     function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
     function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
@@ -167,7 +167,7 @@
       if (!user) return;
 
       // Income type choices (all except DUES — dues are recorded through
-      // the dedicated dues tracker, not yet ported).
+      // the dedicated dues tracker, which keeps the original allocation rules).
       const choices = [
         ["DONATION", "Donation / Contribution"],
         ["EVENT", "Event Fee"],
@@ -181,7 +181,7 @@
         const expenseData = await window.OYA_API.apiFetch("/finance/api/expenses/?page=1");
         document.getElementById("treasuryBalance").textContent = naira(expenseData.treasury_balance);
       } catch (err) {
-        console.warn("OYA: couldn't load treasury balance:", err);
+        window.OYA?.showToast("Treasury balance is temporarily unavailable.", "warning");
         document.getElementById("treasuryBalance").textContent = "unavailable";
       }
     })();

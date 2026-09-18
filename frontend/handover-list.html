@@ -2,14 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a3d62">
+  <link rel="manifest" href="manifest.webmanifest">
   <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
   <title>Handover Ledger | OYA</title>
   <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/layout.css">
   <link rel="stylesheet" href="assets/css/components.css">
@@ -17,6 +15,7 @@
   <link rel="stylesheet" href="assets/css/darkmode.css">
   <link rel="stylesheet" href="assets/css/mobile.css">
   <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="stylesheet" href="assets/css/pwa.css">
 </head>
 <body>
   <div class="app-shell">
@@ -31,6 +30,10 @@
             <div class="page-header-left">
               <h1 style="font-size:clamp(1.125rem, 3vw, 1.5rem);">Handover Ledger</h1>
               <p style="font-size:clamp(0.75rem, 2vw, 0.875rem);">Executive transition records — finances and assets handed over at the end of each tenure</p>
+            </div>
+            <div class="page-header-actions" style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <a href="administrations.html" class="btn btn-secondary">Previous administrations</a>
+              <a href="handover-form.html" class="btn btn-primary">New handover</a>
             </div>
           </div>
 
@@ -72,6 +75,7 @@
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/theme.js"></script>
   <script src="assets/js/shell.js"></script>
+  <script src="assets/js/pwa.js"></script>
   <script>
     function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
     function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
@@ -88,9 +92,9 @@
         <td style="font-weight:600;color:var(--oya-success);">${naira(h.cash_remaining)}</td>
         <td style="font-weight:600;">${naira(totalRevenue)}</td>
         <td>
-          <button type="button" class="table-action-btn" disabled title="Full handover detail view is coming in a future update" style="opacity:0.4;cursor:not-allowed;">
+          <a class="table-action-btn" href="handover-detail.html?id=${h.id}" title="View handover" aria-label="View handover">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
+          </a>
         </td>
       </tr>`;
     }

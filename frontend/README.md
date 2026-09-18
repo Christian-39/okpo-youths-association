@@ -1,108 +1,124 @@
-# OYA Standalone Frontend
+# OYA standalone frontend
 
-Pure HTML/CSS/vanilla JS. No build step, no framework. Talks to the
-Django backend entirely through JSON APIs (see
-`../django_api_additions/`).
+The `frontend/` directory is a framework-free client for the Okpo Youths
+Association Management System. It uses HTML5, CSS3, and vanilla JavaScript
+only. It does not render Django templates and it does not contain a second
+business-logic or permission system.
 
-## Running it
+## Run locally
 
-Any static file server works — this is plain HTML/CSS/JS, no build step.
+Start Django first:
 
 ```bash
-# from inside frontend/
-python -m http.server 5500
-# or VS Code's "Live Server" extension, or nginx, or any static host
+cd ../backend
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8000
 ```
 
-Then open `http://127.0.0.1:5500/login.html`.
+In another terminal, serve this directory over HTTP:
 
-**Before it will work**, apply the Django-side changes in
-`../django_api_additions/` (see that folder's own instructions) and
-start Django (`python manage.py runserver`).
-
-## Configuration
-
-Everything points at the backend through **one** file:
-
-```
-assets/js/config.js
+```bash
+cd frontend
+python -m http.server 5500 --bind 127.0.0.1
 ```
 
-Change `API_BASE_URL` there to switch between dev and production — no
-other file hard-codes the backend origin.
+Open <http://127.0.0.1:5500/login.html>. The browser uses session cookies and
+Django CSRF protection; HTTPS is required for cross-origin production use.
 
-## Folder structure
+## Runtime configuration
 
-```
-frontend/
-├── index.html              redirects to dashboard or login based on session
-├── login.html               ✅ complete
-├── dashboard.html           ✅ complete (admin/executive view; simplified member view)
-├── members.html              ✅ complete (search, filter, paginate)
-├── member-detail.html        ✅ complete (core sections)
-├── member-form.html          ✅ complete (create + edit)
-├── executives.html           ⏳ not yet built
-├── finance.html               ⏳ not yet built
-├── ... (see MIGRATION_REPORT.md for the full remaining list)
-│
-├── assets/
-│   ├── css/          — copied verbatim from the Django project's static/css/
-│   ├── js/
-│   │   ├── config.js  — API base URL + frontend routes
-│   │   ├── api.js      — central fetch client (cookies, CSRF, error handling)
-│   │   ├── auth.js      — login/logout/current-user/page guarding
-│   │   ├── shell.js      — injects shared chrome, wires up nav/theme/search
-│   │   └── theme.js       — copied verbatim (dark/light/system + localStorage)
-│   └── images/
-│
-└── components/       — shared chrome, fetched + injected by shell.js
-    ├── sidebar.html
-    ├── topbar.html
-    ├── mobile_top_header.html
-    ├── mobile_nav.html
-    └── footer.html
+`assets/js/config.js` is the single client configuration module. A deployment
+may set `window.OYA_RUNTIME_CONFIG` before loading it, or add a
+`meta[name="oya-api-base"]` tag, for example:
+
+```html
+<script>window.OYA_RUNTIME_CONFIG = { API_BASE_URL: "https://api.example.org" };</script>
+<script src="assets/js/config.js"></script>
 ```
 
-## Authentication
+Local hosts use port 8000 automatically. Arena/E2B preview hosts infer the
+matching port-8000 API host. Production deployments should inject the real
+API origin rather than editing page files.
 
-Session-based, same as the original Django app — **not** token auth.
-`assets/js/api.js` sends `credentials: "include"` on every request so
-the session cookie rides along, and attaches Django's CSRF header on
-any POST/PUT/PATCH/DELETE.
+## Architecture
 
-Every protected page follows the same boilerplate:
+- `assets/js/api.js` is the only JSON API client. It owns credentials,
+  CSRF bootstrap, timeout handling, safe error messages, bounded retries,
+  GET request de-duplication, and the three-day cache for explicitly safe
+  lookup metadata.
+- `assets/js/auth.js` owns the in-memory current-user state. PINs and session
+  tokens are never written to localStorage.
+- `assets/js/shell.js` injects the shared sidebar, topbar, mobile navigation,
+  footer, role-aware navigation, global search, notification badge, toast
+  helpers, and confirmation modals.
+- `assets/js/theme.js` owns the light/dark theme preference and accessible
+  theme toggle.
+- `assets/js/pwa.js` owns offline notices, service-worker registration, safe
+  update prompts, deployment-version checks, and unsaved-form protection.
+- `sw.js` caches the offline shell and static assets only. It deliberately
+  bypasses `/api/`, `/admin/`, and `/media/` requests so finance, elections,
+  authentication, permissions, and live records are not cached.
+
+Every protected page follows the same pattern:
 
 ```html
 <script src="assets/js/config.js"></script>
 <script src="assets/js/api.js"></script>
 <script src="assets/js/auth.js"></script>
+<script src="assets/js/theme.js"></script>
 <script src="assets/js/shell.js"></script>
+<script src="assets/js/pwa.js"></script>
 <script>
-  (async function () {
+  (async () => {
     const user = await window.OYA_SHELL.init({ page: "members", title: "Members" });
-    if (!user) return; // already redirected to login
-    // ...page logic, using `user` for role-based UI
+    if (!user) return;
+    const data = await window.OYA_API.apiFetch("/members/api/list/");
   })();
 </script>
 ```
 
-`OYA_SHELL.init()` injects the sidebar/topbar/mobile nav, wires up
-theme/dropdowns/logout/search, and redirects to `login.html` if the
-session isn't valid — so individual pages never have to re-implement
-auth guarding.
+## Pages
 
-## Routing
+The standalone client currently includes:
 
-There's no client-side router — this is a traditional multi-page site,
-same as before. `assets/js/config.js`'s `ROUTES` object is the single
-place page filenames are declared, and `data-page="..."` attributes on
-nav links drive the active-state highlighting (see `shell.js`).
+- Authentication, dashboard, profiles, users, notifications, and settings.
+- Members, clans, executives, elections, candidates, voting, handover ledger,
+  previous administrations, and administration reports.
+- Dues tracker, allocation, prepaid dues, debtors, contributions, income,
+  expenses, and finance summaries.
+- Projects and fundraising, outside donors, project donations, donation
+  detail/edit flows, pledges, payments, and pledge detail/edit flows.
+- Task force, motorcycles, case files, audit logs, and shared error/offline
+  pages.
 
-## Adding a new page
+Forms use the existing Django forms and models through JSON endpoints. The
+backend remains authoritative for role checks, validation, calculations,
+linked finance records, election result processing, file uploads, and audit
+entries. Client-side role flags only control presentation; every write API
+re-checks authorization on the server.
 
-1. Copy `members.html`'s `<head>`/shell boilerplate.
-2. Call `OYA_SHELL.init({ page: "...", title: "..." })`.
-3. Fetch data via `window.OYA_API.apiFetch("/app/api/...")`.
-4. Add the corresponding JSON API view in the matching
-   `django_api_additions/<app>/api.py`, wired up per
-   `django_api_additions/URLS_PATCH.md`.
+## API and security notes
+
+- Login is serial number plus a six-digit PIN through
+  `/accounts/api/login/`; authentication is a Django session.
+- All mutating requests obtain a CSRF token and send credentials.
+- Normal feedback uses inline errors, retryable loading/error states, toasts,
+  and confirmation modals rather than browser alerts.
+- Lists use backend pagination and server-side search. Search inputs debounce
+  requests and abort stale global-search requests.
+- Never put secrets, PINs, raw exception text, financial records, election
+  records, or permission decisions in localStorage.
+
+## Static validation
+
+From the repository root:
+
+```bash
+for f in frontend/assets/js/**/*.js; do node --check "$f"; done
+```
+
+The backend smoke suite is run from `backend/` with `python manage.py test`.
+For a release, also exercise the application at 360px, 768px, 1024px, and
+1440px widths, plus 400/401/403/404/409/429/500 responses, timeout/network
+failure, malformed JSON, offline navigation, cache expiry, service-worker
+updates, and unsaved-form update prompts.

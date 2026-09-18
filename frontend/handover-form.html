@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0a3d62">
+  <link rel="manifest" href="manifest.webmanifest"><script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <title>Handover Ledger | OYA</title><link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="stylesheet" href="assets/css/base.css"><link rel="stylesheet" href="assets/css/layout.css"><link rel="stylesheet" href="assets/css/components.css"><link rel="stylesheet" href="assets/css/dashboard.css"><link rel="stylesheet" href="assets/css/darkmode.css"><link rel="stylesheet" href="assets/css/mobile.css"><link rel="stylesheet" href="assets/css/responsive.css"><link rel="stylesheet" href="assets/css/pwa.css">
+</head>
+<body>
+  <div class="app-shell"><div id="sidebar-slot"></div><div class="sidebar-overlay" id="sidebarOverlay"></div><main class="main-content" id="mainContent"><div id="topbar-slot"></div><div class="content-area"><div class="page-container">
+    <div class="page-header"><div class="page-header-left"><h1 id="pageHeading">Create Handover Ledger</h1><p>Record the transition using the association's authoritative handover calculations.</p></div><div class="page-header-actions"><a href="handover-list.html" class="btn btn-secondary">Back to handovers</a></div></div>
+    <div class="card"><div class="card-body"><div id="formErrors" class="alert alert-danger" role="alert" hidden></div><form id="handoverForm" novalidate>
+      <div class="form-grid form-grid-2">
+        <div class="form-group"><label class="form-label" for="election">Related election</label><select class="form-control" id="election" name="election"><option value="">Founding / not linked</option></select><small class="form-help">Optional. Link this transition to the election that produced the incoming administration.</small></div>
+        <div class="form-group"><label class="form-label" for="executive">Outgoing executive <span class="required">*</span></label><select class="form-control" id="executive" name="executive" required><option value="">Choose an outgoing executive</option></select></div>
+        <div class="form-group" id="cashGroup"><label class="form-label" for="cash_remaining">Physical cash at hand (₦)</label><input class="form-control" type="number" min="0" step="0.01" id="cash_remaining" name="cash_remaining" value="0.00"><small class="form-help">Only administrators may enter this manual figure. All other totals are calculated from existing records.</small></div>
+        <div class="form-group form-group-wide"><label class="form-label" for="assets_description">Assets and records handed over</label><textarea class="form-control" id="assets_description" name="assets_description" rows="4" placeholder="Motorcycles, equipment, documents, keys, registers…"></textarea></div>
+        <div class="form-group form-group-wide"><label class="form-label" for="notes">Notes</label><textarea class="form-control" id="notes" name="notes" rows="4" placeholder="Additional handover notes"></textarea></div>
+      </div>
+      <div class="form-actions"><a href="handover-list.html" class="btn btn-secondary">Cancel</a><button class="btn btn-primary" id="saveButton" type="submit">Save handover</button></div>
+    </form></div></div>
+  </div></div><div id="footer-slot"></div></main></div><div id="mobile-top-header-slot"></div><div id="mobile-nav-slot"></div>
+  <script src="assets/js/config.js"></script><script src="assets/js/api.js"></script><script src="assets/js/auth.js"></script><script src="assets/js/theme.js"></script><script src="assets/js/shell.js"></script><script src="assets/js/pwa.js"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get("id");
+    const esc = (v) => { const n = document.createElement("span"); n.textContent = v == null ? "" : String(v); return n.innerHTML; };
+    const errorBox = document.getElementById("formErrors");
+    function showErrors(errors) {
+      const list = [];
+      if (errors && typeof errors === "object" && !Array.isArray(errors)) Object.values(errors).forEach((items) => list.push(...(Array.isArray(items) ? items : [items])));
+      else if (Array.isArray(errors)) list.push(...errors); else if (errors) list.push(errors);
+      errorBox.innerHTML = list.map((item) => `<div>${esc(item)}</div>`).join(""); errorBox.hidden = !list.length;
+    }
+    function setValue(name, value) { const el = document.getElementById(name); if (el && value != null) el.value = value; }
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "handover", title: id ? "Edit Handover" : "Create Handover", requireExecutive: true }); if (!user) return;
+      if (!user.has_admin_access) document.getElementById("cashGroup").hidden = true;
+      try {
+        const [meta, detail] = await Promise.all([
+          window.OYA_API.apiFetch("/elections/api/handovers/form-meta/"),
+          id ? window.OYA_API.apiFetch(`/elections/api/handovers/${encodeURIComponent(id)}/`) : Promise.resolve(null),
+        ]);
+        const election = document.getElementById("election"), executive = document.getElementById("executive");
+        (meta.elections || []).forEach((item) => election.insertAdjacentHTML("beforeend", `<option value="${item.id}">${esc(item.title)} (${esc(item.status)})</option>`));
+        (meta.executives || []).forEach((item) => executive.insertAdjacentHTML("beforeend", `<option value="${item.id}">${esc(item.full_name)} — ${esc(item.post)}</option>`));
+        if (detail && detail.handover) {
+          document.getElementById("pageHeading").textContent = "Edit Handover Ledger";
+          const h = detail.handover; setValue("election", h.election && h.election.id); setValue("executive", h.executive && h.executive.id); setValue("cash_remaining", h.cash_remaining); setValue("assets_description", h.assets_description); setValue("notes", h.notes);
+        }
+      } catch (error) { showErrors(error.message); return; }
+      document.getElementById("handoverForm").addEventListener("submit", async (event) => {
+        event.preventDefault(); showErrors([]); const button = document.getElementById("saveButton"); button.disabled = true; button.textContent = "Saving…";
+        try {
+          const data = await window.OYA_API.apiFetch(id ? `/elections/api/handovers/${encodeURIComponent(id)}/update/` : "/elections/api/handovers/create/", { method: "POST", body: new FormData(event.currentTarget), retries: 0 });
+          window.OYA.showToast("Handover ledger saved.", "success"); window.setTimeout(() => location.assign(`handover-detail.html?id=${data.handover.id}`), 350);
+        } catch (error) { showErrors(error.data && error.data.errors ? error.data.errors : error.message); button.disabled = false; button.textContent = "Save handover"; }
+      });
+    })();
+  </script>
+</body></html>

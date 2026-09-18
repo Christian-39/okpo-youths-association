@@ -552,3 +552,72 @@ Proprietary - Okpo Youths Association
 ## Support
 
 For support, contact the system administrator or the OYA technical team.
+---
+
+## Standalone frontend handover (2026-09-17)
+
+The production client lives in the sibling `../frontend/` directory and is
+served as static HTML. Django remains the authoritative API and business-rule
+layer; the original Django templates and views are intentionally retained for
+backward compatibility and data-preservation safety.
+
+### Shared API behavior
+
+All standalone JSON endpoints use the existing models/forms/services. Write
+endpoints enforce authorization on the server and record audit entries. List
+endpoints use server-side search and pagination where collections can grow.
+Use `assets/js/api.js` rather than adding page-level `fetch` calls.
+
+### Handover and administration APIs
+
+| Method | Endpoint | Purpose | Access |
+|---|---|---|---|
+| GET | `/elections/api/handovers/list/` | Paginated handover ledger | Authenticated |
+| GET | `/elections/api/handovers/form-meta/` | Executive/election choices | Executive |
+| GET | `/elections/api/handovers/<id>/` | Ledger plus bounded report data | Authenticated |
+| POST | `/elections/api/handovers/create/` | Create ledger | Executive |
+| POST | `/elections/api/handovers/<id>/update/` | Update ledger | Executive |
+| DELETE/POST | `/elections/api/handovers/<id>/delete/` | Delete ledger | Admin |
+| GET | `/elections/api/administrations/` | Previous administrations | Executive |
+| GET | `/elections/api/administrations/<key>/` | Tenure-scoped report | Executive |
+
+The form reuses `HandoverLedgerForm`; calculated figures are not accepted as
+client-controlled totals. The physical cash figure keeps its original
+administrator-only rule. Administration reports delegate to
+`elections.administrations` rather than maintaining a duplicate calculation
+engine.
+
+### Project donations and pledges
+
+The project-donations API covers outside-donor CRUD, donation CRUD and status
+transitions, pledge CRUD, pledge payments, and the existing linked-income
+signals. The frontend pages are `donations.html`, `donation-detail.html`,
+`donation-form.html`, `pledges.html`, `pledge-detail.html`, and
+`pledge-form.html`.
+
+### Configuration and deployment
+
+Set `DJANGO_DEBUG=False`, a strong `DJANGO_SECRET_KEY`, explicit
+`DJANGO_ALLOWED_HOSTS`, HTTPS, secure session/CSRF cookies, and explicit CORS
+and CSRF trusted origins in production. The debug-only E2B preview allowlist
+in `oya/settings.py` must not be used as a production host policy. Keep
+Backblaze/storage, database, Redis/Celery, and email credentials in environment
+variables.
+
+`/health/` and `/api/version/` are uncached deployment probes. The frontend
+version is `2026.09.18.1` for this release; update the backend setting,
+`frontend/version.json`, `frontend/assets/js/config.js`, and service-worker
+cache version together when shipping a new release.
+
+### Verification
+
+```bash
+python manage.py check
+python manage.py makemigrations --check --dry-run
+python manage.py migrate --noinput
+python manage.py test --noinput
+```
+
+The repository includes JSON API smoke tests in `core/tests.py` covering health
+and version headers, serial-number/PIN login, authentication, role-based
+permissions, and safe JSON 404 handling.

@@ -2,14 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a3d62">
+  <link rel="manifest" href="manifest.webmanifest">
   <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
   <title>Project Donations | OYA</title>
   <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/layout.css">
   <link rel="stylesheet" href="assets/css/components.css">
@@ -17,6 +15,7 @@
   <link rel="stylesheet" href="assets/css/darkmode.css">
   <link rel="stylesheet" href="assets/css/mobile.css">
   <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="stylesheet" href="assets/css/pwa.css">
 </head>
 <body>
   <div class="app-shell">
@@ -93,6 +92,7 @@
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/theme.js"></script>
   <script src="assets/js/shell.js"></script>
+  <script src="assets/js/pwa.js"></script>
   <script>
     function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
     function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
@@ -114,6 +114,7 @@
         <td class="cell-muted">${esc(d.donation_date || "")}</td>
         <td>
           <div class="table-actions" style="flex-wrap:nowrap;gap:0.25rem;">
+            <a href="donation-detail.html?id=${d.id}" class="table-action-btn" title="View donation" aria-label="View donation"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
             ${isExecutive && d.status === "PLEDGE" ? `<button class="table-action-btn" data-fulfill="${d.id}" title="Mark Fulfilled"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></button>` : ""}
             ${isExecutive ? `<a href="donation-form.html?id=${d.id}" class="table-action-btn" title="Edit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></a>` : ""}
           </div>
@@ -159,7 +160,7 @@
         renderPagination(data.pagination);
         document.querySelectorAll("[data-fulfill]").forEach((btn) => btn.addEventListener("click", async () => {
           try { await window.OYA_API.apiFetch(`/project-donations/api/donations/${btn.dataset.fulfill}/fulfill/`, { method: "POST" }); load(); }
-          catch (err) { alert(err.message); }
+          catch (err) { window.OYA.showToast(err.message, "error"); }
         }));
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--oya-danger);">Couldn't load: ${esc(err.message)}</td></tr>`;

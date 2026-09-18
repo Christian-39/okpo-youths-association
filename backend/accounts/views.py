@@ -287,9 +287,14 @@ def pin_reset(request):
     return render(request, "accounts/pin_reset.html", {"form": form})
 
 
-@login_required
-def profile_view(request):
-    """View own profile with dues, donations, and full contribution tracking."""
+def _get_profile_context(user, payments_page=1):
+    """
+    Data assembly for the profile page (dues, donations, contribution
+    tracking) for `user`. Extracted out of profile_view so accounts.api's
+    JSON endpoint can reuse the exact same computation instead of
+    duplicating it — see dashboard/api.py for the same pattern elsewhere
+    in this codebase.
+    """
     from finance.models import Income, Expense, DuesPayment, DuesPaymentTransaction
     from notifications.models import Notification
     from django.conf import settings
@@ -297,7 +302,6 @@ def profile_view(request):
     from django.db.models.functions import Coalesce
     from datetime import datetime as _datetime, date as _date
 
-    user = request.user
     PLATFORM_START_YEAR = 2020
     YEARLY_DUES = 5000
     current_year = timezone.now().year
@@ -450,7 +454,6 @@ def profile_view(request):
     all_payments_list.sort(key=lambda x: x["created_at"], reverse=True)
 
     payments_paginator = Paginator(all_payments_list, 10)
-    payments_page = request.GET.get("payments_page", 1)
     payments = payments_paginator.get_page(payments_page)
 
     # Notifications
@@ -462,7 +465,7 @@ def profile_view(request):
     profile_form = FloorMemberProfileForm(instance=user)
     pin_form = ChangePINForm()
 
-    context = {
+    return {
         "user": user,
         "payments": payments,
         "total_paid": total_contributions,
@@ -479,8 +482,14 @@ def profile_view(request):
         "pin_form": pin_form,
         "currency_symbol": getattr(settings, "OYA_SETTINGS", {}).get("CURRENCY_SYMBOL", "₦"),
     }
+
+
+@login_required
+def profile_view(request):
+    """View own profile with dues, donations, and full contribution tracking."""
+    context = _get_profile_context(request.user, request.GET.get("payments_page", 1))
     return render(request, "accounts/profile.html", context)
-    
+
 
 @login_required
 @require_POST

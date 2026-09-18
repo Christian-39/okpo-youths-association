@@ -62,6 +62,14 @@
   color: var(--oya-primary);
 }
 
+/* Bottom-nav destination awaiting a frontend page — see
+   .nav-item-pending in layout.css for the same convention.
+   (Generic .link-pending utility lives in base.css.) */
+.mobile-nav-item-pending {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ─── Mobile Sidebar ─── */
 .mobile-sidebar {
   display: none;
@@ -232,6 +240,22 @@
 .mobile-theme-btn:active,
 .mobile-users-btn:active {
   opacity: 0.7;
+}
+
+/* Header/sidebar destinations awaiting a frontend page — see
+   .nav-item-pending in layout.css for the same convention. */
+.mobile-users-btn.topbar-btn-pending,
+.mobile-users-btn.topbar-btn-pending:hover,
+.mobile-users-btn.topbar-btn-pending:active {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: none;
+  color: var(--oya-text-primary);
+}
+
+.mobile-profile-link.link-pending {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .mobile-theme-btn .theme-icon-light,

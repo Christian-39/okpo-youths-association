@@ -30,7 +30,7 @@ from accounts.models import User
 from auditlogs.services import log_action
 from core.utils import exclude_admin_users
 from dashboard.services import invalidate_dashboard_cache
-from project_donations.models import Donation as ProjectDonation
+from project_donations.models import Donation as ProjectDonation, OutsideDonor
 
 from .forms import IncomeForm, ExpenseForm, DuesPaymentAllocationForm
 from .models import Income, Expense, DuesPayment, DuesPaymentTransaction
@@ -678,9 +678,16 @@ def prepaid_detail_api(request, member_id):
 def dues_debtors_list_api(request):
     """
     GET /finance/api/dues/debtors/?search=&year=&page=
-    Mirrors finance.views.dues_debtors_list's per-member debt
-    calculation exactly (same DuesPayment.get_member_debt() calls,
-    same sort-by-highest-debt order).
+
+    Performance note: the previous version called
+    DuesPayment.get_member_debt(member) inside a per-member Python loop,
+    which runs ~4 aggregate queries per member — with ~1,500 members
+    that's 6,000+ queries on a single page load. This version bulk-fetches
+    every member's DuesPayment rows and last-payment date in two queries
+    total, then computes the same debt math (matching
+    DuesPayment.get_member_debt's total_paid/debt_owed/years_paid logic
+    exactly) in memory. The business rule — debt only counted from
+    join_year onward — is unchanged.
     """
     unauth = _require_auth(request)
     if unauth:
@@ -694,32 +701,52 @@ def dues_debtors_list_api(request):
     members_qs = exclude_admin_users(members_qs)
     if search_term:
         members_qs = members_qs.filter(Q(full_name__icontains=search_term) | Q(serial_number__icontains=search_term) | Q(phone__icontains=search_term))
+    members = list(members_qs)
+    member_ids = [m.id for m in members]
+
+    # Bulk-fetch every DuesPayment row for these members in one query,
+    # grouped by member_id, instead of one query per member.
+    dues_by_member = {}
+    for row in DuesPayment.objects.filter(member_id__in=member_ids).values("member_id", "year", "amount_paid"):
+        dues_by_member.setdefault(row["member_id"], []).append((row["year"], row["amount_paid"]))
+
+    # Bulk-fetch each member's last payment date in one query.
+    last_payment_by_member = {
+        row["member_id"]: row["max_date"]
+        for row in DuesPaymentTransaction.objects.filter(member_id__in=member_ids)
+        .values("member_id").annotate(max_date=Max("payment_date"))
+    }
 
     debtor_list = []
-    for member in members_qs:
-        debt_info = DuesPayment.get_member_debt(member)
-        debt_owed = debt_info.get("debt_owed", Decimal("0"))
+    for member in members:
+        join_year = DuesPayment.get_member_join_year(member)  # pure Python, no query
+        start_year = max(join_year, PLATFORM_START_YEAR)
+        years_expected = list(range(start_year, current_year + 1))
+        years_expected_set = set(years_expected)
+        total_expected = len(years_expected) * DuesPayment.YEARLY_DUES_AMOUNT
+
+        member_dues = dues_by_member.get(member.id, [])
+        total_paid = sum((amt for yr, amt in member_dues if yr in years_expected_set), Decimal("0"))
+        years_paid = [yr for yr, amt in member_dues if yr in years_expected_set and amt >= DuesPayment.YEARLY_DUES_AMOUNT]
+        debt_owed = max(total_expected - total_paid, Decimal("0"))
+
         if debt_owed <= 0:
             continue
 
         if year_filter:
             year_int = int(year_filter)
-            join_year = DuesPayment.get_member_join_year(member)
             if year_int < join_year or year_int > current_year:
                 continue
-            dp = DuesPayment.objects.filter(member=member, year=year_int).first()
-            if dp and dp.is_fully_paid:
+            year_amt = next((amt for yr, amt in member_dues if yr == year_int), Decimal("0"))
+            if year_amt >= DuesPayment.YEARLY_DUES_AMOUNT:
                 continue
 
-        years_expected = debt_info.get("years_expected", [])
-        years_paid = debt_info.get("years_paid", [])
-        total_due = len(years_expected) * DuesPayment.YEARLY_DUES_AMOUNT
-        last_payment = DuesPaymentTransaction.objects.filter(member=member).aggregate(max_date=Max("payment_date"))["max_date"]
+        last_payment = last_payment_by_member.get(member.id)
 
         debtor_list.append({
             "member": _serialize_member_brief(member),
-            "total_due": total_due,
-            "total_paid": total_due - debt_owed,
+            "total_due": total_expected,
+            "total_paid": total_expected - debt_owed,
             "debt": debt_owed,
             "years_missed": len(years_expected) - len(years_paid),
             "last_payment_date": last_payment,
@@ -742,4 +769,185 @@ def dues_debtors_list_api(request):
             "next_page_number": page.next_page_number() if page.has_next() else None,
             "start_index": page.start_index(), "end_index": page.end_index(), "count": paginator.count,
         },
+    })
+
+
+@require_http_methods(["GET"])
+def finance_summary_api(request):
+    """
+    GET /finance/api/summary/
+    Mirrors finance.views.finance_summary exactly — same aggregation
+    queries, same "merge dues transactions + income + expenses +
+    project donations into one recent-activity feed sorted by date"
+    logic. The original template has no Chart.js/canvas charts despite
+    MIGRATION_REPORT.md describing this as "trend charts" — it's
+    percentage-bar breakdowns (expenses by category, donations by
+    project), which is what this returns.
+    """
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+
+    from datetime import date, datetime as _datetime
+
+    current_year = timezone.now().year
+
+    total_dues = Income.objects.filter(income_type="DUES").aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    total_prepaid = DuesPayment.objects.filter(
+        year__gt=current_year, amount_paid__gte=YEARLY_DUES,
+    ).aggregate(total=Coalesce(Sum("amount_paid"), Value(0, output_field=DecimalField())))["total"] or Decimal("0")
+    total_dues = total_dues + total_prepaid
+
+    total_donations_income = Income.objects.exclude(
+        income_type__in=["DUES", "PROJECT_DONATION"]
+    ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+    total_project_donations = ProjectDonation.objects.filter(status="CONFIRMED").aggregate(
+        total=Coalesce(Sum("amount"), Value(0, output_field=DecimalField()))
+    )["total"] or Decimal("0")
+
+    total_donations = total_donations_income + total_project_donations
+    total_income = total_dues + total_donations
+    total_expenses = Expense.objects.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    treasury_balance = total_income - total_expenses
+
+    active_members = exclude_admin_users(
+        User.objects.filter(is_active=True, serial_number__isnull=False).exclude(serial_number="")
+    ).count()
+
+    years_count = current_year - PLATFORM_START_YEAR + 1
+    total_dues_possible = active_members * years_count * YEARLY_DUES
+    dues_collection_rate = round((total_dues / total_dues_possible * 100), 1) if total_dues_possible > 0 else 0
+
+    this_year_dues_paid = DuesPayment.objects.filter(year=current_year, amount_paid__gte=YEARLY_DUES).count()
+    this_year_dues_rate = round(this_year_dues_paid / active_members * 100, 1) if active_members > 0 else 0
+
+    expenses_raw = Expense.objects.values("category").annotate(total=Sum("amount")).order_by("-total")
+    expenses_by_category = []
+    for item in expenses_raw:
+        percentage = round((item["total"] / total_expenses * 100), 1) if total_expenses > 0 else 0
+        expenses_by_category.append({
+            "category": dict(Expense.CATEGORY_CHOICES).get(item["category"], item["category"]),
+            "total": item["total"],
+            "percentage": percentage,
+        })
+
+    # ── Recent activity feed: dues transactions + income + expenses +
+    # project donations, normalized to a common shape and merged by date.
+    recent_dues_txns = DuesPaymentTransaction.objects.select_related("member", "recorded_by").order_by("-payment_date")[:5]
+    recent_donations = Income.objects.exclude(income_type__in=["DUES", "PROJECT_DONATION"]).select_related("created_by", "member").order_by("-created_at")[:5]
+    recent_expenses = Expense.objects.select_related("created_by").order_by("-created_at")[:5]
+    recent_project_donations = ProjectDonation.objects.filter(status="CONFIRMED").select_related(
+        "project", "member", "outside_donor", "invited_by"
+    ).order_by("-donation_date")[:5]
+
+    def _aware(dt):
+        if isinstance(dt, date) and not isinstance(dt, _datetime):
+            dt = _datetime.combine(dt, _datetime.min.time())
+        if dt.tzinfo is None:
+            dt = timezone.make_aware(dt)
+        return dt
+
+    recent_transactions = []
+    for txn in recent_dues_txns:
+        years_list = list(DuesPayment.objects.filter(transactions=txn).values_list("year", flat=True).order_by("year"))
+        if years_list:
+            if len(years_list) == 1:
+                description = f"Yearly Dues {years_list[0]}"
+            else:
+                has_prepaid = any(y > current_year for y in years_list)
+                description = f"Yearly Dues ({years_list[0]}\u2013{years_list[-1]}){' (Prepaid)' if has_prepaid else ''}"
+        else:
+            description = "Yearly Dues"
+        recent_transactions.append({
+            "type": "dues_transaction", "amount": txn.total_amount, "description": description,
+            "created_at": _aware(txn.payment_date),
+            "member": txn.member.full_name if txn.member_id else None,
+            "member_id": txn.member_id,
+            "recorded_by": txn.recorded_by.get_full_name() if txn.recorded_by_id else None,
+            "is_prepaid": any(y > current_year for y in years_list) if years_list else False,
+        })
+    for income in recent_donations:
+        recent_transactions.append({
+            "type": "income", "amount": income.amount, "description": income.reason,
+            "created_at": income.created_at, "income_type": income.income_type,
+            "member": income.member.full_name if income.member_id else None,
+        })
+    for expense in recent_expenses:
+        recent_transactions.append({
+            "type": "expense", "amount": expense.amount, "description": expense.description,
+            "created_at": expense.created_at, "category": expense.category,
+        })
+    for pd in recent_project_donations:
+        donor_name = pd.member.full_name if pd.member_id else (pd.outside_donor.full_name if pd.outside_donor_id else "Anonymous")
+        recent_transactions.append({
+            "type": "project_donation", "amount": pd.amount,
+            "description": f"Project Donation \u2014 {pd.project.title if pd.project_id else 'General'}",
+            "created_at": _aware(pd.donation_date), "member": donor_name,
+            "project_id": pd.project_id,
+        })
+    recent_transactions.sort(key=lambda x: x["created_at"], reverse=True)
+    recent_transactions = recent_transactions[:5]
+
+    # ── Top 5 debtors — same per-member DuesPayment.get_member_debt()
+    # the original view uses (not the batch-optimized version above),
+    # to keep this page's numbers identical to the original template's.
+    members = exclude_admin_users(User.objects.filter(is_active=True, serial_number__isnull=False).exclude(serial_number=""))
+    debtor_list = []
+    for member in members:
+        debt = DuesPayment.get_member_debt(member)
+        if debt["debt_owed"] > 0:
+            debtor_list.append({
+                "member": _serialize_member_brief(member),
+                "debt": debt["debt_owed"],
+                "years_missed": len(debt["years_expected"]) - len(debt["years_paid"]),
+            })
+    debtor_list.sort(key=lambda x: x["debt"], reverse=True)
+    top_debtors = debtor_list[:5]
+
+    partial_payments = DuesPayment.objects.filter(amount_paid__gt=0, amount_paid__lt=YEARLY_DUES).count()
+    prepaid_count = DuesPayment.objects.filter(year__gt=current_year, amount_paid__gte=YEARLY_DUES).count()
+
+    total_member_project_donations = ProjectDonation.objects.filter(status="CONFIRMED", donor_type="MEMBER").aggregate(
+        total=Coalesce(Sum("amount"), Value(0, output_field=DecimalField()))
+    )["total"] or Decimal("0")
+    total_outside_project_donations = ProjectDonation.objects.filter(status="CONFIRMED", donor_type="OUTSIDE").aggregate(
+        total=Coalesce(Sum("amount"), Value(0, output_field=DecimalField()))
+    )["total"] or Decimal("0")
+
+    donations_by_project = list(
+        ProjectDonation.objects.filter(status="CONFIRMED")
+        .values("project__title").annotate(total=Sum("amount"), count=Count("id")).order_by("-total")
+    )
+    highest_fundraising_project = donations_by_project[0] if donations_by_project else None
+    total_outside_donors_count = OutsideDonor.objects.count()
+    total_raised_through_invitees = ProjectDonation.objects.filter(status="CONFIRMED", invited_by__isnull=False).aggregate(
+        total=Coalesce(Sum("amount"), Value(0, output_field=DecimalField()))
+    )["total"] or Decimal("0")
+
+    return _json({
+        "treasury_balance": treasury_balance,
+        "total_income": total_income,
+        "total_dues": total_dues,
+        "total_donations": total_donations,
+        "total_expenses": total_expenses,
+        "total_project_donations": total_project_donations,
+        "total_member_project_donations": total_member_project_donations,
+        "total_outside_project_donations": total_outside_project_donations,
+        "donations_by_project": donations_by_project,
+        "highest_fundraising_project": highest_fundraising_project,
+        "total_outside_donors_count": total_outside_donors_count,
+        "total_raised_through_invitees": total_raised_through_invitees,
+        "total_transactions": Income.objects.count() + Expense.objects.count(),
+        "expenses_by_category": expenses_by_category,
+        "recent_transactions": recent_transactions,
+        "active_members": active_members,
+        "dues_collection_rate": dues_collection_rate,
+        "this_year_dues_paid": this_year_dues_paid,
+        "this_year_dues_rate": this_year_dues_rate,
+        "top_debtors": top_debtors,
+        "current_year": current_year,
+        "partial_payments": partial_payments,
+        "prepaid_count": prepaid_count,
+        "total_prepaid": total_prepaid,
     })

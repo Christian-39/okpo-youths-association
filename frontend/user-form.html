@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <title>User Form | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:600px;">
+
+          <div class="page-header"><div class="page-header-left"><h1 id="formTitle" style="font-size:clamp(1.125rem,3vw,1.5rem);">Create User</h1></div></div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="userForm" class="card">
+            <div class="card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div class="form-group" id="serialGroup">
+                <label class="form-label" for="serial_number">Serial Number</label>
+                <input type="text" id="serial_number" name="serial_number" class="form-input" placeholder="OYA-2026-0001" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="full_name">Full Name</label>
+                <input type="text" id="full_name" name="full_name" class="form-input" placeholder="Full Name" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" class="form-input" placeholder="Phone Number">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="state">State</label>
+                <input type="text" id="state" name="state" class="form-input" placeholder="State">
+              </div>
+              <div class="form-group" id="roleGroup" style="display:none;">
+                <label class="form-label" for="role">Role</label>
+                <select id="role" name="role" class="form-select"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="photo">Photo</label>
+                <input type="file" id="photo" name="photo" class="form-input" accept="image/*">
+                <img id="photoPreview" style="display:none;margin-top:0.5rem;max-width:120px;max-height:120px;border-radius:var(--oya-radius);object-fit:cover;">
+              </div>
+              <div class="form-group" id="pinGroup">
+                <label class="form-label" for="pin">PIN</label>
+                <input type="password" id="pin" name="pin" class="form-input" maxlength="6" minlength="6" inputmode="numeric" placeholder="6-digit PIN">
+              </div>
+              <div class="form-group" id="newPinGroup" style="display:none;">
+                <label class="form-label" for="new_pin">New PIN (optional)</label>
+                <input type="password" id="new_pin" name="new_pin" class="form-input" maxlength="6" minlength="6" inputmode="numeric" placeholder="Leave blank to keep current PIN">
+              </div>
+              <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+                <input type="checkbox" id="is_active" name="is_active" value="true" checked>
+                <label class="form-label" for="is_active" style="margin:0;">Active</label>
+              </div>
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="users.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save User</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = Array.isArray(errors) ? errors : [String(errors)];
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+    document.getElementById("photo").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = document.getElementById("photoPreview");
+      img.src = URL.createObjectURL(file);
+      img.style.display = "";
+    });
+
+    const id = new URLSearchParams(window.location.search).get("id");
+    const isEdit = !!id;
+
+    document.getElementById("userForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+      const formData = new FormData(document.getElementById("userForm"));
+      // Checkbox only appears in FormData when checked — CheckboxInput's
+      // value_from_datadict treats an absent key as False, so nothing
+      // extra is needed for the unchecked case.
+      try {
+        const endpoint = isEdit ? `/accounts/api/users/${id}/update/` : "/accounts/api/users/create/";
+        const data = await window.OYA_API.apiFetch(endpoint, { method: "POST", body: formData });
+        window.location.href = `user-detail.html?id=${data.user.id}`;
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
+        else showErrors([err.message || "Something went wrong."]);
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "users", title: isEdit ? "Edit User" : "Create User", requireExecutive: true });
+      if (!user) return;
+
+      if (isEdit) {
+        document.getElementById("formTitle").textContent = "Edit User";
+        document.getElementById("serialGroup").style.display = "none";
+        document.getElementById("serial_number").required = false;
+        document.getElementById("roleGroup").style.display = "";
+        document.getElementById("pinGroup").style.display = "none";
+        document.getElementById("pin").required = false;
+        document.getElementById("newPinGroup").style.display = "";
+
+        try {
+          const roleSel = document.getElementById("role");
+          ["ADMIN", "EXECUTIVE", "FLOOR_MEMBER"].forEach((v) => {
+            const labels = { ADMIN: "Admin", EXECUTIVE: "Executive", FLOOR_MEMBER: "Floor Member" };
+            const o = document.createElement("option"); o.value = v; o.textContent = labels[v]; roleSel.appendChild(o);
+          });
+
+          const { user: u } = await window.OYA_API.apiFetch(`/accounts/api/users/${id}/`);
+          document.getElementById("full_name").value = u.full_name || "";
+          document.getElementById("phone").value = u.phone || "";
+          document.getElementById("state").value = u.state || "";
+          roleSel.value = u.role;
+          document.getElementById("is_active").checked = u.is_active !== false;
+          if (u.photo_url) {
+            const img = document.getElementById("photoPreview");
+            img.src = u.photo_url; img.style.display = "";
+          }
+        } catch (err) {
+          showErrors([err.message || "Couldn't load this user."]);
+        }
+      } else {
+        // Creating here always produces an admin account (server enforces
+        // this too) — the role field is intentionally hidden on create.
+        document.getElementById("formTitle").textContent = "Create Admin User";
+      }
+    })();
+  </script>
+</body>
+</html>

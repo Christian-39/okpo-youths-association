@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0a3d62">
+  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
   <title>Record Dues Payment | OYA</title>
   <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -126,7 +127,11 @@
           box.innerHTML = `<strong>Outstanding years:</strong> ` + data.outstanding.map((o) => `${o.year} (${naira(o.remaining_balance)} owed)`).join(", ");
         }
         box.style.display = "";
-      } catch (_) { box.style.display = "none"; }
+      } catch (err) {
+        console.error("OYA: couldn't load outstanding dues preview:", err);
+        box.innerHTML = `<span style="color:var(--oya-danger);">Couldn't load this member's outstanding dues — you can still enter an amount, but verify the years manually.</span>`;
+        box.style.display = "";
+      }
     }
 
     document.getElementById("allocateForm").addEventListener("submit", async (e) => {

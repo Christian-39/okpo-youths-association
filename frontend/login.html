@@ -44,6 +44,8 @@
             padding: 1rem;
             -webkit-font-smoothing: antialiased;
         }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .alert-container { position: fixed; top: 1rem; left: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
         .alert { background: var(--oya-white); border-radius: var(--oya-radius); padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; box-shadow: var(--oya-shadow-lg); animation: slideDown 0.3s ease-out; font-size: 0.875rem; font-weight: 500; }
         .alert-success { border-left: 4px solid var(--oya-success); color: var(--oya-success); }
@@ -144,59 +146,6 @@
     </div>
 
     <script src="assets/js/config.js"></script>
-    <script src="assets/js/api.js"></script>
-    <script src="assets/js/auth.js"></script>
-    <script>
-        function showAlert(message, type) {
-            const container = document.getElementById('alertContainer');
-            const div = document.createElement('div');
-            div.className = `alert alert-${type === 'error' ? 'danger' : type}`;
-            div.setAttribute('role', 'alert');
-            div.innerHTML = `${message}<button type="button" class="alert-close" onclick="this.parentElement.remove()">&times;</button>`;
-            container.appendChild(div);
-            setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 5000);
-        }
-
-        function showFieldErrors(errors) {
-            const box = document.getElementById('formErrors');
-            box.innerHTML = '';
-            box.style.display = 'flex';
-            (errors || []).forEach((msg) => {
-                const div = document.createElement('div');
-                div.className = 'form-error';
-                div.setAttribute('role', 'alert');
-                div.innerHTML = `<svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${msg}<button type="button" class="alert-close" onclick="this.parentElement.remove()">&times;</button>`;
-                box.appendChild(div);
-            });
-        }
-
-        (async function init() {
-            // If already logged in, skip straight to the dashboard.
-            const existing = await window.OYA_AUTH.getCurrentUser();
-            if (existing) {
-                window.location.href = window.OYA_CONFIG.ROUTES.dashboard;
-                return;
-            }
-            await window.OYA_AUTH.ensureCsrfCookie();
-        })();
-
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('loginBtn');
-            const serial = document.getElementById('serial_number').value.trim();
-            const pin = document.getElementById('pin').value.trim();
-
-            btn.disabled = true;
-            try {
-                const data = await window.OYA_AUTH.login(serial, pin);
-                showAlert(`Welcome, ${data.full_name || serial}!`, 'success');
-                setTimeout(() => { window.location.href = window.OYA_CONFIG.ROUTES.dashboard; }, 400);
-            } catch (err) {
-                const messages = (err.data && err.data.errors) || [err.message || 'Invalid serial number or PIN.'];
-                showFieldErrors(messages);
-                btn.disabled = false;
-            }
-        });
-    </script>
+    <script type="module" src="assets/js/accounts/login.js"></script>
 </body>
 </html>

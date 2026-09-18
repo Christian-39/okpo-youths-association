@@ -1,21 +1,28 @@
 /**
  * OYA Frontend — Central Configuration
- * Auto-detects local vs production backend. No manual switching needed.
  */
+
 (function () {
-  const isLocalhost = ["localhost", "127.0.0.1"].includes(location.hostname);
+  // ── Environment Detection ─────────────────────────────
+  const hostname = window.location.hostname;
+  const isLocal = (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.startsWith("192.168.") ||
+    hostname.startsWith("10.") ||
+    // optional: any other local dev host you use
+    hostname.endsWith(".local")
+  );
+
+  // ── API Base URL ──────────────────────────────────────
+
+  const API_BASE_URL = isLocal
+    ? "http://127.0.0.1:8000"
+    : "https://okpo-youths-association.onrender.com";
 
   window.OYA_CONFIG = {
-    // Django backend origin — auto-switches based on where this file is served
-    API_BASE_URL: isLocalhost
-      ? "http://127.0.0.1:8000"
-      : "https://okpo-youths-association.onrender.com",
+    API_BASE_URL,
 
-    // API prefix used by all fetch calls
-    API_PREFIX: "/accounts/api",
-
-    // Frontend routes, mirroring the Django url names they replace.
-    // Keep in sync with oya/urls.py + each app's urls.py.
     ROUTES: {
       login: "login.html",
       dashboard: "dashboard.html",
@@ -24,5 +31,8 @@
       memberForm: "member-form.html",
       profile: "profile.html",
     },
+
+    // Optional: expose the flag so other scripts can branch if needed
+    IS_LOCAL: isLocal,
   };
 })();

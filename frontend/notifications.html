@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <title>Notifications | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer">
+          <div id="loadingState" style="text-align:center;padding:3rem;color:var(--oya-text-muted);">Loading&hellip;</div>
+          <div id="detailContent" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <!-- Notification detail modal -->
+  <div class="modal-overlay" id="detailModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;">
+    <div class="modal" style="background:var(--oya-bg-card, #fff);border-radius:var(--oya-radius, 12px);max-width:560px;width:90%;max-height:80vh;overflow-y:auto;">
+      <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;padding:1.25rem;border-bottom:1px solid var(--oya-border);">
+        <h3 style="margin:0;font-size:1rem;" id="detailModalTitle">Notification</h3>
+        <button type="button" id="closeDetailModalBtn" class="btn btn-sm btn-ghost">&times;</button>
+      </div>
+      <div class="modal-body" id="detailModalBody" style="padding:1.25rem;"></div>
+    </div>
+  </div>
+
+  <!-- Send notification modal -->
+  <div class="modal-overlay" id="createModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;">
+    <div class="modal" style="background:var(--oya-bg-card, #fff);border-radius:var(--oya-radius, 12px);max-width:520px;width:90%;max-height:85vh;overflow-y:auto;">
+      <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;padding:1.25rem;border-bottom:1px solid var(--oya-border);">
+        <h3 style="margin:0;font-size:1rem;">Send Notification</h3>
+        <button type="button" id="closeCreateModalBtn" class="btn btn-sm btn-ghost">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:1.25rem;">
+        <div id="createFormErrors" style="display:none;margin-bottom:1rem;"></div>
+        <form id="createForm" novalidate>
+          <div class="form-group">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" id="notifTitle" class="form-input" placeholder="Notification title" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Message</label>
+            <textarea name="message" id="notifMessage" class="form-textarea" rows="4" placeholder="Notification message..." required></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select name="notification_type" id="notifType" class="form-select">
+              <option value="INFO">Info</option>
+              <option value="SUCCESS">Success</option>
+              <option value="WARNING">Warning</option>
+              <option value="ERROR">Error</option>
+              <option value="ELECTION">Election</option>
+              <option value="FINANCE">Finance</option>
+              <option value="PROJECT">Project</option>
+              <option value="CASE">Case</option>
+              <option value="SYSTEM">System</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;font-weight:500;">
+              <input type="checkbox" id="notifIsGlobal">
+              Send to all members (global)
+            </label>
+          </div>
+          <div class="form-group" id="recipientGroup">
+            <label class="form-label">Recipient</label>
+            <div style="position:relative;">
+              <input type="text" id="recipientSearch" class="form-input" placeholder="Search member by name, no. or phone…" autocomplete="off">
+              <input type="hidden" id="recipientId">
+              <div id="recipientResults" class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;z-index:10;"></div>
+            </div>
+          </div>
+          <div class="form-actions" style="margin-top:1.5rem;">
+            <button type="submit" class="btn btn-primary" id="createFormSubmit">Send Notification</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function timeAgo(iso) {
+      const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (secs < 60) return "just now";
+      const mins = Math.floor(secs / 60); if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60); if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24); if (days < 30) return `${days}d ago`;
+      const months = Math.floor(days / 30); if (months < 12) return `${months}mo ago`;
+      return `${Math.floor(months / 12)}y ago`;
+    }
+
+    const TYPE_META = {
+      ERROR:    { bg: "var(--oya-danger-bg)",  fg: "var(--oya-danger)",  badge: "badge-danger",  icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>' },
+      CASE:     { bg: "var(--oya-danger-bg)",  fg: "var(--oya-danger)",  badge: "badge-danger",  icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>' },
+      WARNING:  { bg: "var(--oya-warning-bg)", fg: "var(--oya-warning)", badge: "badge-warning", icon: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' },
+      SUCCESS:  { bg: "var(--oya-success-bg)", fg: "var(--oya-success)", badge: "badge-success", icon: '<polyline points="20 6 9 17 4 12"/>' },
+      INFO:     { bg: "var(--oya-info-bg)",    fg: "var(--oya-info)",    badge: "badge-info",    icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>' },
+      SYSTEM:   { bg: "var(--oya-info-bg)",    fg: "var(--oya-info)",    badge: "badge-secondary", icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>' },
+      ELECTION: { bg: "var(--oya-primary-50, var(--oya-info-bg))", fg: "var(--oya-primary)", badge: "badge-primary", icon: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/>' },
+      PROJECT:  { bg: "var(--oya-primary-50, var(--oya-info-bg))", fg: "var(--oya-primary)", badge: "badge-primary", icon: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/>' },
+      FINANCE:  { bg: "var(--oya-accent-50, var(--oya-warning-bg))", fg: "var(--oya-accent-dark, var(--oya-warning))", badge: "badge-accent", icon: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
+    };
+    function typeMeta(t) { return TYPE_META[t] || { bg: "var(--oya-bg)", fg: "var(--oya-text-muted)", badge: "badge-secondary", icon: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>' }; }
+
+    let state = { search: "", type: "", read: "", page: 1 };
+    let currentUser = null;
+
+    function renderTabs(data) {
+      const isAll = !state.type && !state.read;
+      return `
+      <div class="tabs" style="overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;">
+        <button type="button" class="tab-btn ${isAll ? "active" : ""}" data-filter='{"type":"","read":""}'>All <span class="badge badge-secondary" style="margin-left:0.5rem;">${data.total_count}</span></button>
+        <button type="button" class="tab-btn ${state.read === "unread" ? "active" : ""}" data-filter='{"type":"","read":"unread"}'>Unread <span class="badge badge-primary" style="margin-left:0.5rem;">${data.unread_count}</span></button>
+        <button type="button" class="tab-btn ${state.type === "ERROR" ? "active" : ""}" data-filter='{"type":"ERROR","read":""}'>Alerts <span class="badge badge-danger" style="margin-left:0.5rem;">${data.alert_count}</span></button>
+        <button type="button" class="tab-btn ${state.type === "SYSTEM" ? "active" : ""}" data-filter='{"type":"SYSTEM","read":""}'>System <span class="badge badge-info" style="margin-left:0.5rem;">${data.system_count}</span></button>
+      </div>`;
+    }
+
+    function renderItem(n) {
+      const meta = typeMeta(n.notification_type);
+      return `
+      <div class="notification-item ${n.is_read ? "" : "unread"}" data-id="${n.id}" style="white-space:nowrap;overflow:hidden;">
+        <div class="notification-icon" style="flex-shrink:0;background:${meta.bg};color:${meta.fg};">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${meta.icon}</svg>
+        </div>
+        <div class="notification-body" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">
+          <a href="#" class="notification-title js-view" data-id="${n.id}" style="font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;text-decoration:none;color:inherit;cursor:pointer;">${esc(n.title)}</a>
+          <div class="notification-desc" style="font-size:0.8125rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc((n.message || "").split(/\s+/).slice(0, 15).join(" "))}</div>
+          <div style="font-size:0.75rem;color:var(--oya-text-muted);margin-top:0.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${timeAgo(n.created_at)}${n.recipient ? " &middot; To: " + esc(n.recipient) : ""}${n.is_global ? " &middot; Global" : ""}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;margin-left:0.75rem;">
+          <span class="badge ${meta.badge}">${esc(n.notification_type_display)}</span>
+          ${!n.is_read ? '<span class="badge badge-primary">New</span>' : ""}
+          <button type="button" class="btn btn-sm btn-primary js-view" data-id="${n.id}" style="white-space:nowrap;">Read</button>
+          ${currentUser && currentUser.has_executive_access ? `<button type="button" class="table-action-btn danger js-delete" data-id="${n.id}" title="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ""}
+        </div>
+      </div>`;
+    }
+
+    function renderPagination(data) {
+      if (data.num_pages <= 1) return "";
+      const pages = [];
+      for (let n = 1; n <= data.num_pages; n++) {
+        if (n === data.page || n === 1 || n === data.num_pages || Math.abs(n - data.page) < 3) {
+          pages.push(`<button class="page-btn${n === data.page ? " active" : ""}" data-page="${n}"${n === data.page ? " disabled" : ""}>${n}</button>`);
+        } else if (n === data.page - 3 || n === data.page + 3) {
+          pages.push(`<span class="page-btn" style="cursor:default;border:none;background:transparent;">...</span>`);
+        }
+      }
+      return `
+      <div style="display:flex;justify-content:center;padding:1rem 0;">
+        <div class="pagination">
+          <button class="page-btn" data-page="${data.page - 1}" ${data.has_previous ? "" : "disabled"}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+          ${pages.join("")}
+          <button class="page-btn" data-page="${data.page + 1}" ${data.has_next ? "" : "disabled"}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+        </div>
+      </div>`;
+    }
+
+    function renderPage(data) {
+      return `
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1 style="font-size:clamp(1.125rem,3vw,1.5rem);">Notifications</h1>
+          <p style="font-size:0.875rem;color:var(--oya-text-muted);">System alerts, announcements, and member communications</p>
+        </div>
+        <div class="page-header-actions" style="flex-wrap:wrap;gap:0.5rem;">
+          <button type="button" class="btn btn-secondary" id="markAllReadBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            Mark All Read
+          </button>
+          ${currentUser && currentUser.has_executive_access ? `<button type="button" class="btn btn-primary" id="openCreateModalBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Notification</button>` : ""}
+        </div>
+      </div>
+
+      <div class="tabs-wrapper">
+        ${renderTabs(data)}
+        <div class="card" style="margin-top:0;">
+          <div class="table-toolbar" style="flex-wrap:wrap;">
+            <div class="toolbar-search" style="max-width:100%;">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="searchInput" placeholder="Search notifications..." value="${esc(state.search)}">
+            </div>
+          </div>
+          <div id="listBody">
+            ${data.results.length
+              ? data.results.map(renderItem).join("")
+              : `<div class="notification-item" style="justify-content:center;padding:2rem;"><div class="empty-state" style="padding:0;text-align:center;"><div class="empty-state-icon" style="width:56px;height:56px;margin:0 auto 1rem;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><h3 style="font-size:1rem;">No notifications</h3><p style="color:var(--oya-text-muted);font-size:0.875rem;">${state.search || state.type || state.read ? "No notifications match your search/filter criteria." : "You have no notifications at this time."}</p></div></div>`}
+          </div>
+        </div>
+        <div id="paginationBody">${renderPagination(data)}</div>
+      </div>`;
+    }
+
+    async function load() {
+      const params = new URLSearchParams();
+      if (state.search) params.set("search", state.search);
+      if (state.type) params.set("type", state.type);
+      if (state.read) params.set("read", state.read);
+      if (state.page > 1) params.set("page", state.page);
+      const data = await window.OYA_API.apiFetch(`/notifications/api/notifications/?${params.toString()}`);
+      document.getElementById("detailContent").innerHTML = renderPage(data);
+      wirePageEvents();
+    }
+
+    function wirePageEvents() {
+      document.querySelectorAll("[data-filter]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const f = JSON.parse(btn.dataset.filter);
+          state.type = f.type; state.read = f.read; state.page = 1;
+          load().catch((err) => window.OYA.showToast(err.message, "error"));
+        });
+      });
+
+      let searchDebounce;
+      const searchInput = document.getElementById("searchInput");
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          clearTimeout(searchDebounce);
+          searchDebounce = setTimeout(() => {
+            state.search = e.target.value.trim();
+            state.page = 1;
+            load().catch((err) => window.OYA.showToast(err.message, "error"));
+          }, 350);
+        });
+      }
+
+      document.querySelectorAll("#paginationBody [data-page]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const p = Number(btn.dataset.page);
+          if (!p || p < 1) return;
+          state.page = p;
+          load().catch((err) => window.OYA.showToast(err.message, "error"));
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+
+      document.querySelectorAll(".js-view").forEach((el) => {
+        el.addEventListener("click", async (e) => {
+          e.preventDefault();
+          await openDetail(el.dataset.id);
+        });
+      });
+
+      document.querySelectorAll(".js-delete").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("Delete this notification?")) return;
+          try {
+            await window.OYA_API.apiFetch(`/notifications/api/notifications/${btn.dataset.id}/delete/`, { method: "POST" });
+            window.OYA.showToast("Notification deleted.", "success");
+            load();
+          } catch (err) {
+            window.OYA.showToast(err.message || "Couldn't delete.", "error");
+          }
+        });
+      });
+
+      const markAllBtn = document.getElementById("markAllReadBtn");
+      if (markAllBtn) {
+        markAllBtn.addEventListener("click", async () => {
+          try {
+            await window.OYA_API.apiFetch("/notifications/api/mark-all-read/", { method: "POST" });
+            window.OYA.showToast("All notifications marked as read.", "success");
+            load();
+          } catch (err) {
+            window.OYA.showToast(err.message || "Something went wrong.", "error");
+          }
+        });
+      }
+
+      const openCreateBtn = document.getElementById("openCreateModalBtn");
+      if (openCreateBtn) {
+        openCreateBtn.addEventListener("click", () => {
+          document.getElementById("createModalOverlay").style.display = "flex";
+        });
+      }
+    }
+
+    async function openDetail(id) {
+      try {
+        const n = await window.OYA_API.apiFetch(`/notifications/api/notifications/${id}/`);
+        const meta = typeMeta(n.notification_type);
+        document.getElementById("detailModalTitle").textContent = n.title;
+        document.getElementById("detailModalBody").innerHTML = `
+          <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;">
+            <div class="notification-icon" style="flex-shrink:0;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:${meta.bg};color:${meta.fg};">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${meta.icon}</svg>
+            </div>
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.375rem;flex-wrap:wrap;">
+                <span class="badge ${meta.badge}">${esc(n.notification_type_display)}</span>
+                ${n.is_global ? '<span class="badge badge-secondary">Global</span>' : ""}
+              </div>
+              <div style="font-size:0.8125rem;color:var(--oya-text-muted);">${timeAgo(n.created_at)}${n.recipient ? " &middot; To: " + esc(n.recipient) : ""}</div>
+            </div>
+          </div>
+          <div style="background:var(--oya-bg);border-radius:var(--oya-radius);padding:1rem;">
+            <p style="margin:0;line-height:1.7;white-space:pre-wrap;font-size:0.875rem;">${esc(n.message)}</p>
+          </div>`;
+        document.getElementById("detailModalOverlay").style.display = "flex";
+        load(); // refresh list/badges now that it's marked read
+      } catch (err) {
+        window.OYA.showToast(err.message || "Couldn't load notification.", "error");
+      }
+    }
+
+    document.getElementById("closeDetailModalBtn").addEventListener("click", () => {
+      document.getElementById("detailModalOverlay").style.display = "none";
+    });
+    document.getElementById("closeCreateModalBtn").addEventListener("click", () => {
+      document.getElementById("createModalOverlay").style.display = "none";
+    });
+    document.querySelectorAll(".modal-overlay").forEach((ov) => {
+      ov.addEventListener("click", (e) => { if (e.target === ov) ov.style.display = "none"; });
+    });
+
+    document.getElementById("notifIsGlobal").addEventListener("change", (e) => {
+      document.getElementById("recipientGroup").style.display = e.target.checked ? "none" : "";
+    });
+
+    let recipientDebounce;
+    document.getElementById("recipientSearch").addEventListener("input", (e) => {
+      clearTimeout(recipientDebounce);
+      const q = e.target.value.trim();
+      const box = document.getElementById("recipientResults");
+      if (q.length < 1) { box.style.display = "none"; return; }
+      recipientDebounce = setTimeout(async () => {
+        try {
+          const data = await window.OYA_API.apiFetch(`/accounts/api/users/search/?q=${encodeURIComponent(q)}`);
+          const results = data.results || [];
+          box.innerHTML = results.length
+            ? results.map((r) => `<button type="button" class="dropdown-item" data-id="${r.id}" data-name="${esc(r.text || r.full_name)}" style="width:100%;text-align:left;">${esc(r.text || r.full_name)}</button>`).join("")
+            : `<div class="dropdown-item">No matches</div>`;
+          box.style.display = "";
+          box.querySelectorAll("[data-id]").forEach((btn) => btn.addEventListener("click", () => {
+            document.getElementById("recipientId").value = btn.dataset.id;
+            document.getElementById("recipientSearch").value = btn.dataset.name;
+            box.style.display = "none";
+          }));
+        } catch (err) { /* ignore transient search errors */ }
+      }, 300);
+    });
+
+    function showCreateErrors(errors) {
+      const box = document.getElementById("createFormErrors");
+      const lines = Array.isArray(errors) ? errors : [String(errors)];
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    document.getElementById("createForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("createFormSubmit");
+      btn.disabled = true;
+      showCreateErrors([]);
+      const isGlobal = document.getElementById("notifIsGlobal").checked;
+      const payload = {
+        title: document.getElementById("notifTitle").value.trim(),
+        message: document.getElementById("notifMessage").value.trim(),
+        notification_type: document.getElementById("notifType").value,
+        is_global: isGlobal,
+        recipient: isGlobal ? "" : (document.getElementById("recipientId").value || ""),
+      };
+      try {
+        const res = await window.OYA_API.apiFetch("/notifications/api/notifications/create/", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        window.OYA.showToast(res.detail || "Notification sent.", "success");
+        document.getElementById("createModalOverlay").style.display = "none";
+        document.getElementById("createForm").reset();
+        document.getElementById("recipientId").value = "";
+        document.getElementById("recipientGroup").style.display = "";
+        load();
+      } catch (err) {
+        showCreateErrors((err.data && err.data.errors) || [err.message || "Something went wrong."]);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      currentUser = await window.OYA_SHELL.init({ page: "notifications", title: "Notifications" });
+      if (!currentUser) return;
+      try {
+        await load();
+        document.getElementById("loadingState").style.display = "none";
+        document.getElementById("detailContent").style.display = "";
+      } catch (err) {
+        document.getElementById("loadingState").innerHTML = `<div class="alert alert-danger">Couldn't load notifications: ${esc(err.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

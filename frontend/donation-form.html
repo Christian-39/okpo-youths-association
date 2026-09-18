@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0a3d62">
+  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
   <title>Record Donation | OYA</title>
   <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -43,8 +44,12 @@
               </div>
 
               <div class="form-group" id="memberGroup">
-                <label class="form-label" for="member">Member</label>
-                <select id="member" name="member" class="form-select"><option value="">Search member by name, no. or phone…</option></select>
+                <label class="form-label">Member</label>
+                <div style="position:relative;">
+                  <input type="text" id="memberSearch" class="form-input" placeholder="Search member by name, no. or phone…" autocomplete="off">
+                  <input type="hidden" id="member" name="member">
+                  <div id="memberResults" class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;z-index:10;"></div>
+                </div>
               </div>
 
               <div class="form-group" id="outsideDonorGroup" style="display:none;">
@@ -53,8 +58,12 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="invited_by">Invited By (optional)</label>
-                <select id="invited_by" name="invited_by" class="form-select"><option value="">Search inviting member (optional)…</option></select>
+                <label class="form-label">Invited By (optional)</label>
+                <div style="position:relative;">
+                  <input type="text" id="invitedBySearch" class="form-input" placeholder="Search inviting member (optional)…" autocomplete="off">
+                  <input type="hidden" id="invited_by" name="invited_by">
+                  <div id="invitedByResults" class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;z-index:10;"></div>
+                </div>
               </div>
 
               <div class="form-group">
@@ -188,6 +197,33 @@
     document.getElementById("donor_type").addEventListener("change", toggleDonorTypeFields);
     document.getElementById("donation_type").addEventListener("change", toggleDonationTypeFields);
 
+    function wireMemberSearch(searchInputId, hiddenInputId, resultsId) {
+      let debounce;
+      document.getElementById(searchInputId).addEventListener("input", (e) => {
+        clearTimeout(debounce);
+        const q = e.target.value.trim();
+        const box = document.getElementById(resultsId);
+        if (q.length < 1) { box.style.display = "none"; return; }
+        debounce = setTimeout(async () => {
+          try {
+            const data = await window.OYA_API.apiFetch(`/accounts/api/users/search/?q=${encodeURIComponent(q)}`);
+            const results = data.results || [];
+            box.innerHTML = results.length
+              ? results.map((r) => `<button type="button" class="dropdown-item" data-id="${r.id}" data-name="${esc(r.full_name)} (${esc(r.serial_number)})" style="width:100%;text-align:left;">${esc(r.full_name)} (${esc(r.serial_number)})</button>`).join("")
+              : `<div class="dropdown-item">No matches</div>`;
+            box.style.display = "";
+            box.querySelectorAll("[data-id]").forEach((btn) => btn.addEventListener("click", () => {
+              document.getElementById(hiddenInputId).value = btn.dataset.id;
+              document.getElementById(searchInputId).value = btn.dataset.name;
+              box.style.display = "none";
+            }));
+          } catch (err) { /* ignore transient search errors */ }
+        }, 300);
+      });
+    }
+    wireMemberSearch("memberSearch", "member", "memberResults");
+    wireMemberSearch("invitedBySearch", "invited_by", "invitedByResults");
+
     document.getElementById("donationForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = document.getElementById("submitBtn");
@@ -216,12 +252,8 @@
         meta.projects.forEach((p) => { const o = document.createElement("option"); o.value = p.id; o.textContent = p.title; projSel.appendChild(o); });
         const donorTypeSel = document.getElementById("donor_type");
         meta.donor_type_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; donorTypeSel.appendChild(o); });
-        const memberSel = document.getElementById("member");
-        meta.members.forEach((m) => { const o = document.createElement("option"); o.value = m.id; o.textContent = `${m.full_name} (${m.serial_number})`; memberSel.appendChild(o); });
         const outsideSel = document.getElementById("outside_donor");
         meta.outside_donors.forEach((d) => { const o = document.createElement("option"); o.value = d.id; o.textContent = d.full_name; outsideSel.appendChild(o); });
-        const invitedSel = document.getElementById("invited_by");
-        meta.members.forEach((m) => { const o = document.createElement("option"); o.value = m.id; o.textContent = `${m.full_name} (${m.serial_number})`; invitedSel.appendChild(o); });
         const typeSel = document.getElementById("donation_type");
         meta.donation_type_choices.forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; typeSel.appendChild(o); });
         const paySel = document.getElementById("payment_method");
@@ -235,13 +267,28 @@
         if (isEdit) {
           document.getElementById("formTitle").textContent = "Edit Donation";
           const { donation } = await window.OYA_API.apiFetch(`/project-donations/api/donations/${id}/`);
-          // Note: donation-detail only returns display-safe fields; for a
-          // fuller pre-fill (exact member/outside_donor id, raw material
-          // fields) this form relies on re-entering those specifics on edit.
           if (donation.project) projSel.value = donation.project.id;
           donorTypeSel.value = donation.donor_type;
+          if (donation.donor_type === "MEMBER" && donation.member) {
+            document.getElementById("member").value = donation.member.id;
+            document.getElementById("memberSearch").value = donation.member.full_name;
+          } else if (donation.donor_type === "OUTSIDE" && donation.outside_donor) {
+            outsideSel.value = donation.outside_donor.id;
+          }
+          if (donation.invited_by) {
+            document.getElementById("invited_by").value = donation.invited_by.id;
+            document.getElementById("invitedBySearch").value = donation.invited_by.full_name;
+          }
           typeSel.value = donation.donation_type;
           document.getElementById("amount").value = donation.amount || "";
+          document.getElementById("material_name").value = donation.material_name || "";
+          document.getElementById("quantity").value = donation.quantity || "";
+          document.getElementById("labour_type").value = donation.labour_type || "";
+          document.getElementById("number_of_days").value = donation.number_of_days || "";
+          document.getElementById("estimated_value").value = donation.estimated_value || "";
+          document.getElementById("update_treasury").checked = !!donation.update_treasury;
+          document.getElementById("narration").value = donation.narration || "";
+          document.getElementById("remarks").value = donation.remarks || "";
           paySel.value = donation.payment_method;
           document.getElementById("reference_number").value = donation.reference_number || "";
           statusSel.value = donation.status;

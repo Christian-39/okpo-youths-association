@@ -100,6 +100,10 @@
   background: var(--oya-bg);
 }
 
+[data-theme="dark"] .topbar-btn.topbar-btn-pending:hover {
+  background: var(--oya-bg-white);
+}
+
 [data-theme="dark"] .toolbar-search input {
   background: var(--oya-bg);
   border-color: var(--oya-border);
@@ -161,6 +165,10 @@
 
 [data-theme="dark"] .dropdown-item:hover {
   background: var(--oya-bg-white);
+}
+
+[data-theme="dark"] .dropdown-item.dropdown-item-pending:hover {
+  background: none;
 }
 
 [data-theme="dark"] .toast {

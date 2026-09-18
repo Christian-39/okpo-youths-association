@@ -7,6 +7,16 @@
 
   const STORAGE_KEY = 'oya_theme';
 
+  // NOTE ON FOUC PREVENTION: every app page also carries a tiny inline
+  // <script> in <head> (before the CSS <link> tags) that duplicates the
+  // localStorage-read + matchMedia-check below just enough to set
+  // data-theme on <html> before first paint. That snippet is intentionally
+  // minimal and MUST stay in sync with STORAGE_KEY and the light/dark
+  // resolution rule here — this file remains the one authoritative theme
+  // manager for everything else (persistence, switching, system-preference
+  // updates, UI sync). If STORAGE_KEY or the fallback logic below ever
+  // changes, update the inline snippet in every page's <head> to match.
+
   // ─── Get Preferred Theme ───
   function getTheme() {
     const stored = localStorage.getItem(STORAGE_KEY);

@@ -1,10 +1,12 @@
 """
 JSON API views for the standalone OYA frontend — elections module.
 
-Scope: Election CRUD + Candidate CRUD + voting only. The Handover
-Ledger and Executive Administration Report views/templates
-(elections/views.py's handover_* and administration_* functions) are
-NOT covered here — see MIGRATION_REPORT.md.
+Scope: Election CRUD + Candidate CRUD + voting + Handover Ledger list
+only. handover_detail/create/update/delete and administration_list/
+administration_report are NOT covered here — those need
+elections.administrations' 790-line, 14-section report engine
+serialized in full, which is a much larger, separate piece of work —
+see MIGRATION_REPORT.md.
 
 Added alongside the existing elections/views.py (left untouched).
 Reuses ElectionForm / CandidateForm exactly. Election result
@@ -13,10 +15,12 @@ processing (Election.process_election_results()) is signal-driven
 whether the save happens through the old view or this API — so it is
 NOT reimplemented here, only triggered via form.save() same as before.
 """
+from decimal import Decimal
+
 from django.core.paginator import Paginator
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.db.utils import OperationalError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -26,7 +30,7 @@ from auditlogs.services import log_action
 from dashboard.services import invalidate_dashboard_cache
 
 from .forms import ElectionForm, CandidateForm
-from .models import Election, Candidate, Vote
+from .models import Election, Candidate, Vote, HandoverLedger
 
 
 def _json(data, **kwargs):
@@ -293,3 +297,76 @@ def cast_vote_api(request, pk):
     )
     invalidate_dashboard_cache()
     return _json({"candidate": _serialize_candidate(candidate)})
+
+
+# ── Handover Ledger (list only — see module docstring) ──────────────
+
+def _serialize_handover(h):
+    return {
+        "id": h.pk,
+        "executive": {
+            "id": h.executive_id,
+            "full_name": h.executive.member.full_name,
+            "post": h.executive.post,
+        } if h.executive_id else None,
+        "election": {"id": h.election_id, "title": h.election.title} if h.election_id else None,
+        "tenure_start": h.tenure_start,
+        "tenure_end": h.tenure_end,
+        "cash_remaining": h.cash_remaining,
+        "total_income": h.total_income,
+        "total_dues": h.total_dues,
+        "total_donations": h.total_donations,
+        "taskforce_revenue": h.taskforce_revenue,
+        "total_expenses": h.total_expenses,
+        "created_at": h.created_at,
+    }
+
+
+@require_http_methods(["GET"])
+def handover_list_api(request):
+    """GET /elections/api/handovers/list/?search=&page= — mirrors elections.views.handover_list exactly."""
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+
+    queryset = HandoverLedger.objects.select_related("executive__member", "election").all()
+
+    search_term = request.GET.get("search", "")
+    if search_term:
+        queryset = queryset.filter(
+            Q(executive__member__full_name__icontains=search_term)
+            | Q(executive__post__icontains=search_term)
+            | Q(election__title__icontains=search_term)
+        )
+
+    queryset = queryset.order_by("-tenure_start")
+    paginator = Paginator(queryset, 12)
+    page = paginator.get_page(request.GET.get("page", 1))
+
+    agg = HandoverLedger.objects.aggregate(
+        total_cash_remaining=Sum("cash_remaining"),
+        sum_income=Sum("total_income"),
+        sum_dues=Sum("total_dues"),
+        sum_donations=Sum("total_donations"),
+        sum_taskforce=Sum("taskforce_revenue"),
+    )
+    stats = {
+        "total": HandoverLedger.objects.count(),
+        "total_cash_remaining": agg["total_cash_remaining"] or Decimal("0"),
+        "total_revenue": (
+            (agg["sum_income"] or Decimal("0"))
+            + (agg["sum_dues"] or Decimal("0"))
+            + (agg["sum_donations"] or Decimal("0"))
+            + (agg["sum_taskforce"] or Decimal("0"))
+        ),
+    }
+
+    return _json({
+        "results": [_serialize_handover(h) for h in page.object_list],
+        "page": page.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page.has_next(),
+        "has_previous": page.has_previous(),
+        "count": paginator.count,
+        "stats": stats,
+    })

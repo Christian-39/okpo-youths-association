@@ -211,3 +211,47 @@ def member_update_api(request, pk):
         "member": _serialize_member(member),
         "updated_pin": updated_pin,
     })
+
+
+# ── Clans ────────────────────────────────────────────────────────
+# Mirrors members.views.clan_list/clan_create exactly. There is no
+# clan_update/clan_delete in the original app — Clan only has a `name`
+# field and these two views are the entire feature.
+
+@require_http_methods(["GET"])
+def clan_list_api(request):
+    """GET /members/api/clans/list/ — mirrors members.views.clan_list."""
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+
+    from django.db.models import Count
+    clans = Clan.objects.annotate(member_count=Count("members")).order_by("name")
+    return JsonResponse({
+        "results": [{"id": c.id, "name": c.name, "member_count": c.member_count} for c in clans]
+    })
+
+
+@require_http_methods(["POST"])
+def clan_create_api(request):
+    """POST /members/api/clans/create/ — mirrors members.views.clan_create (executive access required)."""
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+    forbidden = _require_executive(request)
+    if forbidden:
+        return forbidden
+
+    from .forms import ClanForm
+    form = ClanForm(request.POST)
+    if not form.is_valid():
+        errors = [msg for error_list in form.errors.values() for msg in error_list]
+        return JsonResponse({"errors": errors}, status=400)
+
+    clan = form.save()
+    log_action(
+        user=request.user, action="CREATE", object_type="Clan", object_id=clan.id,
+        ip_address=getattr(request, "client_ip", ""), description=f"Created clan {clan.name}",
+    )
+    invalidate_dashboard_cache()
+    return JsonResponse({"detail": f"Clan '{clan.name}' created successfully.", "clan": {"id": clan.id, "name": clan.name, "member_count": 0}}, status=201)

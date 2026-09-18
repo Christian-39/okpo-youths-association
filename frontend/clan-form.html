@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a3d62">
+  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <title>Add Clan | OYA</title>
+  <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/darkmode.css">
+  <link rel="stylesheet" href="assets/css/mobile.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="main-content" id="mainContent">
+      <div id="topbar-slot"></div>
+      <div class="content-area" id="contentArea">
+        <div class="page-container" id="pageContainer" style="max-width:480px;">
+
+          <div class="page-header"><div class="page-header-left"><h1 style="font-size:clamp(1.125rem,3vw,1.5rem);">Add Clan</h1></div></div>
+
+          <div id="formErrorsBox" style="display:none;margin-bottom:1rem;"></div>
+
+          <form id="clanForm" class="card">
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label" for="name">Clan Name</label>
+                <input type="text" id="name" name="name" class="form-input" placeholder="Enter clan name" required>
+              </div>
+            </div>
+            <div class="card-footer" style="display:flex;gap:0.75rem;justify-content:flex-end;">
+              <a href="clans.html" class="btn btn-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Save Clan</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div id="mobile-top-header-slot"></div>
+  <div id="mobile-nav-slot"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/theme.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script>
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function showErrors(errors) {
+      const box = document.getElementById("formErrorsBox");
+      const lines = Array.isArray(errors) ? errors : [String(errors)];
+      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
+      box.style.display = lines.length ? "" : "none";
+    }
+
+    document.getElementById("clanForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = true;
+      showErrors([]);
+      const formData = new FormData(document.getElementById("clanForm"));
+      try {
+        await window.OYA_API.apiFetch("/members/api/clans/create/", { method: "POST", body: formData });
+        window.location.href = "clans.html";
+      } catch (err) {
+        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
+        else showErrors([err.message || "Something went wrong."]);
+        btn.disabled = false;
+      }
+    });
+
+    (async function () {
+      const user = await window.OYA_SHELL.init({ page: "clans", title: "Add Clan", requireExecutive: true });
+      if (!user) return;
+    })();
+  </script>
+</body>
+</html>

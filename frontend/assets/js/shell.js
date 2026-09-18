@@ -213,7 +213,12 @@
         if (count > 0) { mobileBadge.textContent = count > 99 ? "99+" : count; mobileBadge.style.display = "flex"; }
         else mobileBadge.style.display = "none";
       }
-    } catch (_) { /* non-fatal */ }
+    } catch (err) {
+      // Non-fatal — badge just stays hidden. Logged so a genuine
+      // backend outage is still visible in devtools rather than
+      // looking like "zero notifications" forever.
+      console.warn("OYA: couldn't refresh notification badge:", err);
+    }
   }
 
   function wireGlobalSearch() {
@@ -231,16 +236,38 @@
         try {
           const data = await window.OYA_API.apiFetch(`${url}?q=${encodeURIComponent(q)}`);
           renderSearchResults(data.results || []);
-        } catch (_) { /* ignore */ }
+        } catch (err) {
+          console.error("OYA: global search failed:", err);
+          resultsBox.innerHTML = `<div class="dropdown-item" style="color:var(--oya-danger);">Search unavailable — try again</div>`;
+          resultsBox.classList.remove("hidden");
+        }
       }, 300);
     });
+
+    // Maps a search result's `type` to the frontend page that can show
+    // it. The backend intentionally only returns `type` + `id` (not a
+    // URL) — this frontend owns its own routing, not the Django app.
+    const SEARCH_TYPE_PAGES = {
+      member: "member-detail.html?id=",
+      case: "case-detail.html?id=",
+      project: "project-detail.html?id=",
+      outside_donor: "outside-donor-detail.html?id=",
+    };
 
     function renderSearchResults(results) {
       if (!results.length) {
         resultsBox.innerHTML = `<div class="dropdown-item">No results</div>`;
       } else {
         resultsBox.innerHTML = results
-          .map((r) => `<a class="dropdown-item" href="${r.url}">${r.name}</a>`)
+          .map((r) => {
+            const page = SEARCH_TYPE_PAGES[r.type];
+            // "user" (and any future unmapped type) has no standalone
+            // frontend detail page yet — show as plain text rather than
+            // a dead or misleading link.
+            return page
+              ? `<a class="dropdown-item" href="${page}${r.id}">${r.name}</a>`
+              : `<div class="dropdown-item" style="opacity:0.7;">${r.name}</div>`;
+          })
           .join("");
       }
       resultsBox.classList.remove("hidden");

@@ -605,7 +605,7 @@ Backblaze/storage, database, Redis/Celery, and email credentials in environment
 variables.
 
 `/health/` and `/api/version/` are uncached deployment probes. The frontend
-version is `2026.09.18.1` for this release; update the backend setting,
+version is `2026.09.23.1` for this release; update the backend setting,
 `frontend/version.json`, `frontend/assets/js/config.js`, and service-worker
 cache version together when shipping a new release.
 

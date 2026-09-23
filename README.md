@@ -412,3 +412,74 @@ By replacing manual record-keeping with a centralized digital solution, the asso
 **Version:** 1.0  
 **Prepared For:** Okpo Youths Association  
 **Motto:** *Peace & Progress*
+---
+
+# Developer handover
+
+## Repository layout
+
+- `backend/` is the Django 5.2 authoritative backend. The original models,
+  forms, signals, calculations, audit services, migrations, and server-rendered
+  templates remain in place so existing business rules and historical data are
+  preserved.
+- `frontend/` is a standalone HTML5/CSS3/vanilla-JavaScript client. It talks
+  to the backend through JSON APIs and never imports Django template syntax.
+- `frontend/assets/js/api.js` is the centralized API client; `auth.js`,
+  `shell.js`, `theme.js`, and `pwa.js` provide the shared client modules.
+
+## Local setup
+
+```bash
+cd backend
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver 127.0.0.1:8000
+```
+
+In a second terminal:
+
+```bash
+cd frontend
+python -m http.server 5500 --bind 127.0.0.1
+```
+
+Open `http://127.0.0.1:5500/login.html`. Configure deployment values only
+through `backend/.env` and the runtime frontend configuration described in
+`frontend/README.md`; do not commit credentials or PINs.
+
+## Authoritative API contract
+
+All protected API endpoints use Django session authentication and CSRF. The
+backend performs every permission check, form validation, financial
+calculation, election transition, linked-record update, upload, and audit log.
+The frontend role flags are presentation hints only.
+
+Stable entry points include `/health/`, `/api/version/`,
+`/accounts/api/`, `/members/api/`, `/executives/api/`, `/elections/api/`,
+`/finance/api/`, `/projects/api/`, `/project-donations/api/`,
+`/operations/api/`, `/notifications/api/`, `/auditlogs/api/`, and
+`/dashboard/api/`. Handover and administration report endpoints are documented
+in `backend/README.md`.
+
+## Release checks
+
+```bash
+cd backend
+python manage.py check
+python manage.py makemigrations --check --dry-run
+python manage.py test --noinput
+python -m py_compile $(find . -name '*.py' -not -path './.venv/*')
+cd ../frontend
+find assets/js -name '*.js' -print0 | xargs -0 -n1 node --check
+```
+
+Before deployment, test authenticated and unauthenticated behavior, admin,
+executive, and floor-member permissions, pagination/search, file uploads,
+400/401/403/404/409/429/500 responses, network timeout/offline behavior, cache
+expiry, service-worker updates, and responsive layouts at 360px, 768px,
+1024px, and 1440px. The service worker never caches authenticated API,
+finance, election, permission, or live-status responses.

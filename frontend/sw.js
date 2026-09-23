@@ -1,6 +1,6 @@
 /* OYA service worker — conservative by design. API and authenticated data are network-only. */
 "use strict";
-const VERSION = "oya-2026.09.18.1";
+const VERSION = "oya-2026.09.23.1";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "offline.html";

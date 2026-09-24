@@ -1,12 +1,11 @@
 """
 JSON API views for the standalone OYA frontend — elections module.
 
-Scope: Election CRUD + Candidate CRUD + voting + Handover Ledger list
-only. handover_detail/create/update/delete and administration_list/
-administration_report are NOT covered here — those need
-elections.administrations' 790-line, 14-section report engine
-serialized in full, which is a much larger, separate piece of work —
-see MIGRATION_REPORT.md.
+Scope: Election CRUD + Candidate CRUD + voting + full Handover Ledger
+and Previous Administration report JSON endpoints for the standalone
+frontend. All calculations are still delegated to elections.models and
+elections.administrations so election/handover business rules remain
+server-side.
 
 Added alongside the existing elections/views.py (left untouched).
 Reuses ElectionForm / CandidateForm exactly. Election result
@@ -29,7 +28,7 @@ from django.views.decorators.http import require_http_methods
 from auditlogs.services import log_action
 from dashboard.services import invalidate_dashboard_cache
 
-from .forms import ElectionForm, CandidateForm
+from .forms import ElectionForm, CandidateForm, HandoverLedgerForm
 from .models import Election, Candidate, Vote, HandoverLedger
 
 
@@ -47,6 +46,229 @@ def _require_executive(request):
     if not request.user.has_executive_access():
         return _json({"detail": "Executive access required."}, status=403)
     return None
+
+
+
+
+def _choice_label(value, choices):
+    return dict(choices).get(value, value)
+
+
+def _member_label(member):
+    if not member:
+        return None
+    return {
+        "id": member.pk,
+        "full_name": getattr(member, "full_name", str(member)),
+        "serial_number": getattr(member, "serial_number", ""),
+        "label": getattr(member, "full_name", str(member)),
+    }
+
+
+def _user_label(user):
+    if not user:
+        return None
+    name = user.get_full_name() if hasattr(user, "get_full_name") else str(user)
+    return {
+        "id": user.pk,
+        "full_name": name,
+        "serial_number": getattr(user, "serial_number", ""),
+        "label": name,
+    }
+
+
+def _object_label(obj):
+    if obj is None:
+        return ""
+    for attr in ("full_name", "title", "name", "case_number", "asset_tag", "reason", "description"):
+        value = getattr(obj, attr, None)
+        if value:
+            return str(value)
+    return str(obj)
+
+
+def _serialize_model(obj):
+    """Small, bounded summaries for model instances inside handover reports.
+
+    The handover/administration engine returns real model objects and querysets
+    because the original templates rendered them directly. JSON callers need a
+    safe, display-focused shape instead of raw model internals.
+    """
+    if obj is None:
+        return None
+
+    model_name = obj.__class__.__name__
+    data = {"id": getattr(obj, "pk", None), "label": _object_label(obj)}
+
+    if hasattr(obj, "created_at"):
+        data["created_at"] = obj.created_at
+    if hasattr(obj, "updated_at"):
+        data["updated_at"] = obj.updated_at
+
+    if model_name == "Executive":
+        data.update({
+            "full_name": obj.member.full_name if getattr(obj, "member_id", None) else "",
+            "post": obj.post,
+            "post_display": obj.get_post_display() if hasattr(obj, "get_post_display") else obj.post,
+            "start_date": obj.start_date,
+            "end_date": obj.end_date,
+            "is_current": obj.is_current,
+            "member": _member_label(obj.member) if getattr(obj, "member_id", None) else None,
+        })
+    elif model_name == "Election":
+        data.update({
+            "title": obj.title,
+            "status": obj.status,
+            "status_display": obj.get_status_display() if hasattr(obj, "get_status_display") else obj.status,
+            "start_date": obj.start_date,
+            "end_date": obj.end_date,
+        })
+    elif model_name == "Income":
+        data.update({
+            "reason": obj.reason,
+            "amount": obj.amount,
+            "income_type": obj.income_type,
+            "income_type_display": obj.get_income_type_display() if hasattr(obj, "get_income_type_display") else obj.income_type,
+            "payer": obj.get_payer_display() if hasattr(obj, "get_payer_display") else "",
+        })
+    elif model_name == "Expense":
+        data.update({
+            "description": obj.description,
+            "amount": obj.amount,
+            "category": getattr(obj, "category", ""),
+        })
+    elif model_name == "DuesPaymentTransaction":
+        data.update({
+            "member": _user_label(obj.member) if getattr(obj, "member_id", None) else None,
+            "amount": obj.total_amount,
+            "total_amount": obj.total_amount,
+            "payment_date": obj.payment_date,
+            "payment_method": obj.payment_method,
+            "receipt_reference": obj.receipt_reference,
+        })
+    elif model_name == "Project":
+        data.update({
+            "title": obj.title,
+            "status": obj.status,
+            "status_display": obj.get_status_display() if hasattr(obj, "get_status_display") else obj.status,
+            "budget": getattr(obj, "budget", None),
+            "progress_percentage": getattr(obj, "progress_percentage", None),
+        })
+    elif model_name == "CaseFile":
+        data.update({
+            "case_number": obj.case_number,
+            "title": obj.title,
+            "status": obj.status,
+            "status_display": obj.get_status_display() if hasattr(obj, "get_status_display") else obj.status,
+            "fine_amount": obj.fine_amount,
+            "resolved_date": obj.resolved_date,
+            "respondent": _member_label(obj.respondent) if getattr(obj, "respondent_id", None) else None,
+        })
+    elif model_name == "TaskForceMember":
+        data.update({
+            "member": _member_label(obj.member) if getattr(obj, "member_id", None) else None,
+            "full_name": obj.member.full_name if getattr(obj, "member_id", None) else "",
+            "assigned_date": obj.assigned_date,
+            "is_active": obj.is_active,
+            "status": "Active" if obj.is_active else "Inactive",
+            "notes": obj.notes,
+        })
+    elif model_name == "Motorcycle":
+        data.update({
+            "asset_tag": obj.asset_tag,
+            "brand": obj.brand,
+            "model": obj.model,
+            "year": obj.year,
+            "condition": obj.condition,
+            "condition_display": obj.get_condition_display() if hasattr(obj, "get_condition_display") else obj.condition,
+            "status": "Assigned" if getattr(obj, "assigned_to_id", None) else "In Store",
+            "assigned_to": _member_label(obj.assigned_to) if getattr(obj, "assigned_to_id", None) else None,
+        })
+    elif model_name == "Donation":
+        donor = getattr(obj, "member", None) or getattr(obj, "outside_donor", None)
+        data.update({
+            "project": _serialize_model(obj.project) if getattr(obj, "project_id", None) else None,
+            "donor": _member_label(donor) if donor and donor.__class__.__name__ == "Member" else (_serialize_model(donor) if donor else None),
+            "amount": getattr(obj, "amount", None),
+            "estimated_value": getattr(obj, "estimated_value", None),
+            "donation_date": getattr(obj, "donation_date", None),
+            "donation_type": getattr(obj, "donation_type", ""),
+            "status": getattr(obj, "status", ""),
+        })
+    elif model_name == "Pledge":
+        donor = getattr(obj, "member", None) or getattr(obj, "outside_donor", None)
+        data.update({
+            "project": _serialize_model(obj.project) if getattr(obj, "project_id", None) else None,
+            "donor": _member_label(donor) if donor and donor.__class__.__name__ == "Member" else (_serialize_model(donor) if donor else None),
+            "pledged_amount": getattr(obj, "pledged_amount", None),
+            "outstanding_balance": getattr(obj, "outstanding_balance", None),
+            "donation_type": getattr(obj, "donation_type", ""),
+            "status": getattr(obj, "status", ""),
+        })
+    elif model_name == "OutsideDonor":
+        data.update({"full_name": obj.full_name, "phone_number": obj.phone_number})
+    elif model_name == "DonationGroup":
+        data.update({
+            "name": obj.name,
+            "description": getattr(obj, "description", ""),
+            "is_active": getattr(obj, "is_active", None),
+            "member_count": getattr(obj, "member_count", None),
+            "total_realized": getattr(obj, "total_money_donated", None),
+        })
+    elif model_name == "Member":
+        data.update(_member_label(obj))
+    elif model_name == "User":
+        data.update(_user_label(obj))
+    elif model_name == "HandoverLedger":
+        data.update(_serialize_handover(obj))
+
+    return data
+
+
+def _serialize_any(value):
+    if value is None or isinstance(value, (str, int, float, bool, Decimal)):
+        return value
+    if hasattr(value, "isoformat") and value.__class__.__module__.startswith("datetime"):
+        return value
+    if hasattr(value, "model") and hasattr(value, "all"):
+        return [_serialize_any(v) for v in value]
+    if isinstance(value, (list, tuple, set)):
+        return [_serialize_any(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _serialize_any(v) for k, v in value.items()}
+    if hasattr(value, "_meta"):
+        return _serialize_model(value)
+    return str(value)
+
+
+def _serialize_administration(admin):
+    election = admin.get("election")
+    return {
+        "key": admin.get("key"),
+        "name": admin.get("name"),
+        "status": admin.get("status"),
+        "is_current": admin.get("is_current"),
+        "tenure_start": admin.get("tenure_start"),
+        "tenure_end": admin.get("tenure_end"),
+        "member_count": admin.get("member_count", 0),
+        "election": _serialize_model(election) if election else None,
+        "executives": [_serialize_model(e) for e in admin.get("executives", [])],
+    }
+
+
+def _serialize_report(report):
+    if not report:
+        return None
+    serialized = {k: _serialize_any(v) for k, v in report.items() if k != "administration"}
+    serialized["administration"] = _serialize_administration(report["administration"])
+    if isinstance(serialized.get("extra_sections"), list):
+        sections = serialized["extra_sections"]
+        serialized["extra_sections"] = {
+            "items": sections,
+            "counts": {"sections": len(sections)},
+            "description": "Additional registered report sections.",
+        }
+    return serialized
 
 
 def _serialize_election(e):
@@ -370,3 +592,199 @@ def handover_list_api(request):
         "count": paginator.count,
         "stats": stats,
     })
+
+
+@require_http_methods(["GET"])
+def handover_form_meta_api(request):
+    """GET /elections/api/handovers/form-meta/ — select options for the handover form."""
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+    forbidden = _require_executive(request)
+    if forbidden:
+        return forbidden
+
+    from executives.models import Executive
+
+    elections = Election.objects.order_by("-created_at")[:200]
+    executives = Executive.objects.select_related("member", "elected_via").order_by("-start_date", "post")[:500]
+    return _json({
+        "can_edit_cash_remaining": request.user.has_admin_access(),
+        "elections": [
+            {"id": e.pk, "title": e.title, "status": e.status, "status_display": e.get_status_display()}
+            for e in elections
+        ],
+        "executives": [
+            {
+                "id": ex.pk,
+                "full_name": ex.member.full_name if ex.member_id else str(ex),
+                "post": ex.post,
+                "post_display": ex.get_post_display(),
+                "is_current": ex.is_current,
+                "start_date": ex.start_date,
+                "end_date": ex.end_date,
+                "elected_via": _serialize_model(ex.elected_via) if ex.elected_via_id else None,
+            }
+            for ex in executives
+        ],
+    })
+
+
+def _report_for_handover(handover):
+    from .administrations import build_administration_report
+
+    key = None
+    if handover.election_id:
+        key = str(handover.election_id)
+    elif handover.executive_id and handover.executive.elected_via_id:
+        key = str(handover.executive.elected_via_id)
+    else:
+        key = "founding"
+    return build_administration_report(key)
+
+
+@require_http_methods(["GET"])
+def handover_detail_api(request, pk):
+    """GET /elections/api/handovers/<pk>/ — ledger + calculated report data."""
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+
+    handover = get_object_or_404(
+        HandoverLedger.objects.select_related("executive__member", "executive__elected_via", "election"),
+        pk=pk,
+    )
+    report = _report_for_handover(handover)
+    return _json({
+        "handover": _serialize_handover(handover),
+        "report": _serialize_report(report) if report else None,
+        "can_manage": request.user.has_executive_access(),
+        "can_delete": request.user.has_admin_access(),
+    })
+
+
+@require_http_methods(["POST"])
+def handover_create_api(request):
+    """POST /elections/api/handovers/create/ — creates ledger atomically."""
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+    forbidden = _require_executive(request)
+    if forbidden:
+        return forbidden
+
+    with transaction.atomic():
+        form = HandoverLedgerForm(request.POST, user=request.user)
+        if not form.is_valid():
+            return _json({"errors": form.errors}, status=400)
+        handover = form.save()
+
+    log_action(
+        user=request.user,
+        action="CREATE",
+        object_type="HandoverLedger",
+        object_id=handover.id,
+        ip_address=getattr(request, "client_ip", ""),
+        description=f"Created handover ledger for {handover.executive} (₦{handover.net_financial_position:,.2f})",
+    )
+    invalidate_dashboard_cache()
+    return _json({"handover": _serialize_handover(handover)}, status=201)
+
+
+@require_http_methods(["POST"])
+def handover_update_api(request, pk):
+    """POST /elections/api/handovers/<pk>/update/ — recalculates aggregates server-side."""
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+    forbidden = _require_executive(request)
+    if forbidden:
+        return forbidden
+
+    handover = get_object_or_404(HandoverLedger, pk=pk)
+    with transaction.atomic():
+        form = HandoverLedgerForm(request.POST, instance=handover, user=request.user)
+        if not form.is_valid():
+            return _json({"errors": form.errors}, status=400)
+        handover = form.save()
+
+    log_action(
+        user=request.user,
+        action="UPDATE",
+        object_type="HandoverLedger",
+        object_id=handover.id,
+        ip_address=getattr(request, "client_ip", ""),
+        description=f"Updated handover ledger for {handover.executive}",
+    )
+    invalidate_dashboard_cache()
+    return _json({"handover": _serialize_handover(handover)})
+
+
+@require_http_methods(["POST", "DELETE"])
+def handover_delete_api(request, pk):
+    """DELETE/POST /elections/api/handovers/<pk>/delete/ — admin only."""
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+    if not request.user.has_admin_access():
+        return _json({"detail": "Admin access required."}, status=403)
+
+    handover = get_object_or_404(HandoverLedger.objects.select_related("executive__member"), pk=pk)
+    executive_name = str(handover.executive)
+    with transaction.atomic():
+        handover.delete()
+
+    log_action(
+        user=request.user,
+        action="DELETE",
+        object_type="HandoverLedger",
+        object_id=pk,
+        ip_address=getattr(request, "client_ip", ""),
+        description=f"Deleted handover ledger for {executive_name}",
+    )
+    invalidate_dashboard_cache()
+    return _json({"detail": f"Handover ledger for {executive_name} deleted."})
+
+
+@require_http_methods(["GET"])
+def administration_list_api(request):
+    """GET /elections/api/administrations/ — previous/current administration summaries."""
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+    forbidden = _require_executive(request)
+    if forbidden:
+        return forbidden
+
+    from .administrations import list_administrations
+
+    return _json({
+        "administrations": [_serialize_administration(a) for a in list_administrations()]
+    })
+
+
+@require_http_methods(["GET"])
+def administration_report_api(request, key):
+    """GET /elections/api/administrations/<key>/ — full server-generated report."""
+    unauth = _require_auth(request)
+    if unauth:
+        return unauth
+    forbidden = _require_executive(request)
+    if forbidden:
+        return forbidden
+
+    from .administrations import build_administration_report
+
+    report = build_administration_report(key)
+    if report is None:
+        return _json({"detail": "That administration could not be found."}, status=404)
+
+    log_action(
+        user=request.user,
+        action="VIEW",
+        object_type="ExecutiveHandoverReport",
+        object_id=None,
+        ip_address=getattr(request, "client_ip", ""),
+        description=f"Viewed Executive Handover Report for {report['administration']['name']}",
+    )
+    return _json({"report": _serialize_report(report)})

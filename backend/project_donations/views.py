@@ -365,8 +365,7 @@ def donation_detail(request, pk):
 def donation_create(request):
     """Record a new donation."""
     if not request.user.has_executive_access():
-        messages.error(request, "Executive access required.")
-        return redirect("project_donations:donation_list")
+        return JsonResponse({"detail": "Executive access required."}, status=403)
 
     if request.method == "POST":
         form = DonationForm(request.POST)
@@ -402,8 +401,7 @@ def donation_create(request):
 def donation_update(request, pk):
     """Update an existing donation."""
     if not request.user.has_executive_access():
-        messages.error(request, "Executive access required.")
-        return redirect("project_donations:donation_list")
+        return JsonResponse({"detail": "Executive access required."}, status=403)
 
     donation = get_object_or_404(Donation, pk=pk)
 
@@ -532,8 +530,7 @@ def donation_cancel_pledge(request, pk):
 def project_fundraising_report(request, project_id):
     """Generate PDF report for project fundraising summary."""
     if not request.user.has_executive_access():
-        messages.error(request, "Executive access required.")
-        return redirect("projects:project_detail", pk=project_id)
+        return JsonResponse({"detail": "Executive access required."}, status=403)
 
     from projects.models import Project
     project = get_object_or_404(Project, pk=project_id)
@@ -550,8 +547,7 @@ def project_fundraising_report(request, project_id):
 def outside_donor_statement_pdf(request, pk):
     """Generate PDF statement for an outside donor."""
     if not request.user.has_executive_access():
-        messages.error(request, "Executive access required.")
-        return redirect("project_donations:outside_donor_detail", pk=pk)
+        return JsonResponse({"detail": "Executive access required."}, status=403)
 
     donor = get_object_or_404(OutsideDonor, pk=pk)
     pdf = generate_outside_donor_statement(donor)
@@ -566,8 +562,7 @@ def outside_donor_statement_pdf(request, pk):
 def member_donation_history_pdf(request, pk):
     """Generate PDF report for member donation history."""
     if not request.user.has_executive_access():
-        messages.error(request, "Executive access required.")
-        return redirect("members:member_detail", pk=pk)
+        return JsonResponse({"detail": "Executive access required."}, status=403)
 
     from members.models import Member
     member = get_object_or_404(Member, pk=pk)
@@ -583,8 +578,7 @@ def member_donation_history_pdf(request, pk):
 def donation_history_report(request):
     """Generate PDF report for all donation history."""
     if not request.user.has_executive_access():
-        messages.error(request, "Executive access required.")
-        return redirect("project_donations:donation_list")
+        return JsonResponse({"detail": "Executive access required."}, status=403)
 
     donations = Donation.objects.select_related(
         "project", "member", "outside_donor", "recorded_by"

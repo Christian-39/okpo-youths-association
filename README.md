@@ -483,3 +483,81 @@ executive, and floor-member permissions, pagination/search, file uploads,
 expiry, service-worker updates, and responsive layouts at 360px, 768px,
 1024px, and 1440px. The service worker never caches authenticated API,
 finance, election, permission, or live-status responses.
+
+---
+
+# Migration implementation update — 2026-09-24
+
+The target repository now runs as a separated application:
+
+- **Backend:** Django API backend in `backend/`, with versioned aliases under
+  `/api/v1/`, Django session authentication, CSRF protection, backend-enforced
+  RBAC, server-side validation/calculation, audit logging, and MySQL-ready
+  configuration.
+- **Frontend:** standalone HTML/CSS/vanilla JavaScript in `frontend/`, with no
+  Django template syntax and page scripts in `frontend/assets/js/pages/`.
+- **API client:** all frontend API calls go through `frontend/assets/js/api.js`,
+  which applies the API base URL, `/api/v1` prefix, credentials, CSRF, timeout,
+  retry, de-duplication, and normalized error handling.
+- **Authentication:** members sign in with membership serial number and 6-digit
+  PIN through the backend. PINs are hashed; login attempts are rate-limited;
+  sessions are HttpOnly Django cookies.
+
+Important endpoints include:
+
+- `/api/v1/accounts/api/csrf/`
+- `/api/v1/accounts/api/login/`
+- `/api/v1/accounts/api/logout/`
+- `/api/v1/accounts/api/me/`
+- `/api/v1/members/api/list/`
+- `/api/v1/executives/api/list/`
+- `/api/v1/finance/api/summary/`
+- `/api/v1/projects/api/list/`
+- `/api/v1/project-donations/api/donations/list/`
+- `/api/v1/elections/api/list/`
+- `/api/v1/elections/api/handovers/list/`
+- `/api/v1/elections/api/administrations/`
+- `/api/v1/operations/api/cases/list/`
+- `/api/v1/notifications/api/notifications/`
+- `/api/v1/auditlogs/api/list/`
+- `/api/v1/settings/api/settings/`
+- `/api/v1/search/api/`
+
+## Development setup
+
+```bash
+cd backend
+python -m venv ../.venv
+../.venv/bin/pip install -r requirements.txt
+cp .env.example .env
+../.venv/bin/python manage.py migrate
+../.venv/bin/python manage.py runserver 127.0.0.1:8000
+```
+
+In a second terminal:
+
+```bash
+cd frontend
+python -m http.server 5500 --bind 127.0.0.1
+```
+
+Open `http://127.0.0.1:5500/login.html`.
+
+## Frontend runtime configuration
+
+Use `window.OYA_RUNTIME_CONFIG` (see `frontend/config.runtime.example.js`) or
+`localStorage.oya_api_base_url` for staging checks. Do not hardcode production
+API origins across pages.
+
+## Tests
+
+```bash
+./run-tests.sh            # backend + frontend checks
+./run-tests.sh backend    # Django API contract tests
+./run-tests.sh frontend   # JS syntax and static frontend contract checks
+```
+
+Latest local result: all suites passed.
+
+See `MIGRATION_IMPLEMENTATION_NOTES.md` for the implementation/audit notes and
+remaining manual staging checks.

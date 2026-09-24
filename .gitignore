@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+
+# Django/local data
+backend/db.sqlite3
+backend/db.sqlite3-*
+backend/media/*
+!backend/media/.gitkeep
+backend/staticfiles/
+backend/logs/*
+!backend/logs/.gitkeep
+backend/test-media/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/config.runtime.js
+
+# Node / frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.vscode/*
+!frontend/.vscode/settings.json
+
+# Build outputs
+build/
+dist/
+out/
+.cache/

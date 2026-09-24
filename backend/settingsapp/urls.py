@@ -8,11 +8,6 @@ from . import api
 app_name = "settingsapp"
 
 urlpatterns = [
-    # Donation Groups (Feature 1, 2, 3)
-    path("donation-groups/<int:pk>/toggle-active/", views.donation_group_toggle_active, name="donation_group_toggle_active"),
-    path("donation-groups/<int:pk>/members/add/", views.donation_group_member_add, name="donation_group_member_add"),
-    path("donation-groups/<int:pk>/members/<int:membership_pk>/remove/", views.donation_group_member_remove, name="donation_group_member_remove"),
-
     # Standalone-frontend JSON API
     path("api/settings/", api.system_settings_api, name="system_settings_api"),
     path("api/settings/update/", api.system_settings_update_api, name="system_settings_update_api"),

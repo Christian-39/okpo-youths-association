@@ -7,6 +7,7 @@ Okpo Youths Association Management System
 import os
 from decouple import config
 from pathlib import Path
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -97,21 +98,35 @@ ASGI_APPLICATION = "oya.asgi.application"
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 # Database
-DATABASES = {
-    "default": {
-        "ENGINE": config("DB_ENGINE", default="django.db.backends.sqlite3"),
-        "NAME": config("DB_NAME", default=BASE_DIR / "db.sqlite3"),
-        "USER": config("DB_USER", default=""),
-        "PASSWORD": config("DB_PASSWORD", default=""),
-        "HOST": config("DB_HOST", default=""),
-        "PORT": config("DB_PORT", default=""),
-        "CONN_MAX_AGE": 60,
-        "CONN_HEALTH_CHECKS": True,
-        "OPTIONS": {
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+# DATABASE_URL is preferred in production (Render/Railway/managed DBs).
+# DB_* variables remain supported for deployments that manage each field
+# separately. MySQL strict mode is only applied to MySQL engines so local
+# SQLite/PostgreSQL checks and tests do not fail on a MySQL-only option.
+DATABASE_URL = config("DATABASE_URL", default="").strip()
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=60,
+            conn_health_checks=True,
+        )
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": config("DB_ENGINE", default="django.db.backends.sqlite3"),
+            "NAME": config("DB_NAME", default=str(BASE_DIR / "db.sqlite3")),
+            "USER": config("DB_USER", default=""),
+            "PASSWORD": config("DB_PASSWORD", default=""),
+            "HOST": config("DB_HOST", default=""),
+            "PORT": config("DB_PORT", default=""),
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
         }
     }
-}
+
+if DATABASES["default"].get("ENGINE") == "django.db.backends.mysql":
+    DATABASES["default"].setdefault("OPTIONS", {})["init_command"] = "SET sql_mode='STRICT_TRANS_TABLES'"
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -205,35 +220,43 @@ else:
 
 
 # ============================================
-# BACKBLAZE B2 / S3 COMPATIBLE STORAGE
+# MEDIA STORAGE
 # ============================================
 
-# Use S3Boto3Storage directly — same as your Gadgets Store
+MEDIA_STORAGE_MODE = config("MEDIA_STORAGE_MODE", default="local").lower().strip()
+MEDIA_ROOT = BASE_DIR / "media"
+
 STORAGES = {
     "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 
-# B2 Credentials (from Railway env vars)
-AWS_ACCESS_KEY_ID = config("B2_KEY_ID")
-AWS_SECRET_ACCESS_KEY = config("B2_APPLICATION_KEY")
-AWS_STORAGE_BUCKET_NAME = config("B2_BUCKET_NAME")
-AWS_S3_REGION_NAME = config("B2_BUCKET_REGION", default="us-east-005")
-AWS_S3_ENDPOINT_URL = config("B2_ENDPOINT_URL", default="https://s3.us-east-005.backblazeb2.com")
+if MEDIA_STORAGE_MODE == "b2":
+    AWS_ACCESS_KEY_ID = config("B2_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = config("B2_APPLICATION_KEY")
+    AWS_STORAGE_BUCKET_NAME = config("B2_BUCKET_NAME")
+    AWS_S3_REGION_NAME = config("B2_BUCKET_REGION", default="us-east-005")
+    AWS_S3_ENDPOINT_URL = config("B2_ENDPOINT_URL", default="https://s3.us-east-005.backblazeb2.com")
+    AWS_S3_CUSTOM_DOMAIN = config("B2_CUSTOM_DOMAIN", default="").strip() or None
 
-# CRITICAL B2 Settings
-AWS_S3_ADDRESSING_STYLE = "virtual"
-AWS_S3_SIGNATURE_VERSION = "s3v4"
-AWS_QUERYSTRING_AUTH = False
-AWS_DEFAULT_ACL = "public-read"
-AWS_S3_FILE_OVERWRITE = True
+    AWS_S3_ADDRESSING_STYLE = "virtual"
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_QUERYSTRING_AUTH = False
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_S3_FILE_OVERWRITE = False
 
-# Media URL
-MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.backblazeb2.com/"
+    STORAGES["default"] = {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"}
+    MEDIA_URL = (
+        f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+        if AWS_S3_CUSTOM_DOMAIN
+        else f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.backblazeb2.com/"
+    )
+else:
+    MEDIA_URL = "/media/"
 
 # ============================================
 # WHITENOISE (Production)
@@ -291,6 +314,11 @@ LOGOUT_REDIRECT_URL = "/accounts/api/login/"
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
+# Conservative baseline for API responses/admin. The standalone frontend
+# has its own static files and should avoid inline script/style in new work.
+CSP_DEFAULT_SRC = config("CSP_DEFAULT_SRC", default="'self'")
 
 # Logging
 LOGS_DIR = BASE_DIR / "logs"

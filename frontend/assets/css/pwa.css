@@ -1,0 +1,57 @@
+/* OYA PWA / offline/update UI helpers. Kept small and framework-free. */
+.oya-pwa-banner {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: .875rem 1rem;
+  border: 1px solid var(--oya-border, #d7dee8);
+  border-radius: 14px;
+  background: var(--oya-surface, #fff);
+  color: var(--oya-text, #172033);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, .18);
+}
+.oya-pwa-banner[hidden] { display: none !important; }
+.oya-pwa-banner__text { min-width: 0; font-size: .875rem; line-height: 1.35; }
+.oya-pwa-banner__text strong { display: block; margin-bottom: .125rem; }
+.oya-pwa-banner__actions { display: inline-flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+.oya-pwa-banner__button {
+  border: 0;
+  border-radius: 10px;
+  padding: .55rem .8rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--oya-primary, #0a3d62);
+  color: #fff;
+}
+.oya-pwa-banner__button.secondary {
+  background: transparent;
+  color: var(--oya-text-muted, #64748b);
+}
+.oya-offline-indicator {
+  position: fixed;
+  top: calc(.75rem + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1201;
+  border-radius: 999px;
+  padding: .45rem .75rem;
+  background: #7c2d12;
+  color: #fff;
+  font-size: .8125rem;
+  font-weight: 700;
+  box-shadow: 0 8px 25px rgba(15, 23, 42, .22);
+}
+.oya-offline-indicator[hidden] { display: none !important; }
+@media (max-width: 520px) {
+  .oya-pwa-banner { align-items: stretch; flex-direction: column; }
+  .oya-pwa-banner__actions { justify-content: flex-end; }
+}

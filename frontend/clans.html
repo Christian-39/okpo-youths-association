@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a3d62">
   <link rel="manifest" href="manifest.webmanifest">
-  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <script src="assets/js/early-theme.js"></script>
   <title>Clans | OYA</title>
   <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
   <link rel="stylesheet" href="assets/css/base.css">
@@ -62,27 +62,6 @@
   <script src="assets/js/theme.js"></script>
   <script src="assets/js/shell.js"></script>
   <script src="assets/js/pwa.js"></script>
-  <script>
-    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
-
-    async function load() {
-      const tbody = document.getElementById("tbody");
-      try {
-        const data = await window.OYA_API.apiFetch("/members/api/clans/list/");
-        tbody.innerHTML = data.results.length
-          ? data.results.map((c) => `<tr><td><span class="cell-name">${esc(c.name)}</span></td><td><span class="badge badge-secondary">${c.member_count} member${c.member_count === 1 ? "" : "s"}</span></td></tr>`).join("")
-          : `<tr><td colspan="2" style="text-align:center;padding:2rem;color:var(--oya-text-muted);">No clans recorded yet.</td></tr>`;
-      } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align:center;padding:2rem;color:var(--oya-danger);">Couldn't load: ${esc(err.message)}</td></tr>`;
-      }
-    }
-
-    (async function () {
-      const user = await window.OYA_SHELL.init({ page: "clans", title: "Clans" });
-      if (!user) return;
-      if (user.has_executive_access) document.getElementById("addBtn").style.display = "";
-      load();
-    })();
-  </script>
+  <script src="assets/js/pages/clans.js"></script>
 </body>
 </html>

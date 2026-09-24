@@ -5,10 +5,11 @@ import json
 import logging
 
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
-from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from auditlogs.services import log_request_action
@@ -17,6 +18,40 @@ from .models import User
 from .views import _get_profile_context
 
 logger = logging.getLogger("oya")
+
+
+LOGIN_FAILURE_LIMIT = 5
+LOGIN_WINDOW_SECONDS = 5 * 60
+LOGIN_LOCK_SECONDS = 15 * 60
+
+
+def _client_ip(request):
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "unknown")
+
+
+def _login_cache_key(request, serial_number):
+    serial = (serial_number or "unknown").upper().strip() or "unknown"
+    return f"oya:login:{_client_ip(request)}:{serial}"
+
+
+def _login_throttle_state(request, serial_number):
+    return cache.get(_login_cache_key(request, serial_number), {"count": 0, "locked": False})
+
+
+def _record_login_failure(request, serial_number):
+    key = _login_cache_key(request, serial_number)
+    state = cache.get(key, {"count": 0, "locked": False})
+    count = int(state.get("count", 0)) + 1
+    locked = count >= LOGIN_FAILURE_LIMIT
+    cache.set(key, {"count": count, "locked": locked}, LOGIN_LOCK_SECONDS if locked else LOGIN_WINDOW_SECONDS)
+    return locked
+
+
+def _clear_login_failures(request, serial_number):
+    cache.delete(_login_cache_key(request, serial_number))
 
 
 def _json(data, **kwargs):
@@ -54,7 +89,6 @@ def csrf_api(request):
     return JsonResponse({"csrfToken": token})
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def login_api(request):
     """
@@ -74,8 +108,19 @@ def login_api(request):
     if not serial_number or not pin:
         return JsonResponse({"errors": ["Serial number and PIN are required."]}, status=400)
 
+    throttle = _login_throttle_state(request, serial_number)
+    if throttle.get("locked"):
+        return JsonResponse(
+            {
+                "errors": ["Too many failed login attempts. Please wait before trying again."],
+                "retry_after_seconds": LOGIN_LOCK_SECONDS,
+            },
+            status=429,
+        )
+
     user = authenticate(request, serial_number=serial_number, pin=pin)
     if user is not None:
+        _clear_login_failures(request, serial_number)
         login(request, user)
         log_request_action(
             request,
@@ -97,10 +142,13 @@ def login_api(request):
     except User.DoesNotExist:
         message = "Invalid serial number or PIN. Please check your credentials and try again."
 
-    return JsonResponse({"errors": [message]}, status=401)
+    locked = _record_login_failure(request, serial_number)
+    status = 429 if locked else 401
+    if locked:
+        message = "Too many failed login attempts. Please wait before trying again."
+    return JsonResponse({"errors": [message]}, status=status)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def logout_api(request):
     """POST /accounts/api/logout/"""

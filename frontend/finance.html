@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a3d62">
   <link rel="manifest" href="manifest.webmanifest">
-  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <script src="assets/js/early-theme.js"></script>
   <title>Finance | OYA</title>
   <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
   <link rel="stylesheet" href="assets/css/base.css">
@@ -96,26 +96,6 @@
   <script src="assets/js/theme.js"></script>
   <script src="assets/js/shell.js"></script>
   <script src="assets/js/pwa.js"></script>
-  <script>
-    function naira(n) { return "\u20A6" + Math.round(Number(n) || 0).toLocaleString("en-NG"); }
-    (async function () {
-      const user = await window.OYA_SHELL.init({ page: "finance", title: "Finance" });
-      if (!user) return;
-      try {
-        const data = await window.OYA_API.apiFetch("/finance/api/expenses/?page=1");
-        document.getElementById("kpiTreasury").textContent = naira(data.treasury_balance);
-        document.getElementById("kpiIncome").textContent = naira(data.total_income);
-        document.getElementById("kpiExpenses").textContent = naira(data.total_expenses);
-        document.getElementById("kpiMonth").textContent = naira(data.this_month_expenses);
-      } catch (err) {
-        // These are financial figures — a silent blank "—" could be
-        // mistaken for an actual zero balance, so this failure must be
-        // visible, not hidden.
-        window.OYA?.showToast("Finance figures are temporarily unavailable.", "error");
-        document.getElementById("kpiRow").insertAdjacentHTML("afterend",
-          `<div class="alert alert-danger" style="margin-bottom:1.5rem;">Couldn't load the figures above — they are not reliable right now. (${err.message || "network error"})</div>`);
-      }
-    })();
-  </script>
+  <script src="assets/js/pages/finance.js"></script>
 </body>
 </html>

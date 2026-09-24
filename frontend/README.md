@@ -28,24 +28,26 @@ Django CSRF protection; HTTPS is required for cross-origin production use.
 ## Runtime configuration
 
 `assets/js/config.js` is the single client configuration module. A deployment
-may set `window.OYA_RUNTIME_CONFIG` before loading it, or add a
-`meta[name="oya-api-base"]` tag, for example:
+may define `window.OYA_RUNTIME_CONFIG` before loading it (for example from an
+uncommitted `config.runtime.js`) or set `localStorage.oya_api_base_url` during
+staging verification:
 
 ```html
-<script>window.OYA_RUNTIME_CONFIG = { API_BASE_URL: "https://api.example.org" };</script>
+<script>window.OYA_RUNTIME_CONFIG = {
+  API_BASE_URL: "https://api.example.org",
+  API_PREFIX: "/api/v1"
+};</script>
 <script src="assets/js/config.js"></script>
 ```
 
-Local hosts use port 8000 automatically. Arena/E2B preview hosts infer the
-matching port-8000 API host. Production deployments should inject the real
-API origin rather than editing page files.
+Local hosts use `http://127.0.0.1:8000` automatically. Production deployments
+should inject the real API origin rather than editing page files.
 
 ## Architecture
 
-- `assets/js/api.js` is the only JSON API client. It owns credentials,
-  CSRF bootstrap, timeout handling, safe error messages, bounded retries,
-  GET request de-duplication, and the three-day cache for explicitly safe
-  lookup metadata.
+- `assets/js/api.js` is the only JSON API client. It owns API-prefixing,
+  credentials, CSRF bootstrap, timeout handling, safe error messages, bounded
+  GET-only retries, and GET request de-duplication.
 - `assets/js/auth.js` owns the in-memory current-user state. PINs and session
   tokens are never written to localStorage.
 - `assets/js/shell.js` injects the shared sidebar, topbar, mobile navigation,
@@ -62,20 +64,20 @@ API origin rather than editing page files.
 Every protected page follows the same pattern:
 
 ```html
+<script src="assets/js/early-theme.js"></script>
 <script src="assets/js/config.js"></script>
 <script src="assets/js/api.js"></script>
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/theme.js"></script>
 <script src="assets/js/shell.js"></script>
 <script src="assets/js/pwa.js"></script>
-<script>
-  (async () => {
-    const user = await window.OYA_SHELL.init({ page: "members", title: "Members" });
-    if (!user) return;
-    const data = await window.OYA_API.apiFetch("/members/api/list/");
-  })();
-</script>
+<script src="assets/js/pages/members.js"></script>
 ```
+
+Page-specific JavaScript lives in `assets/js/pages/`; inline JavaScript is not
+used in the standalone frontend. Calls such as
+`window.OYA_API.apiFetch("/members/api/list/")` are automatically sent to the
+configured versioned prefix, currently `/api/v1/members/api/list/`.
 
 ## Pages
 
@@ -99,8 +101,8 @@ re-checks authorization on the server.
 
 ## API and security notes
 
-- Login is serial number plus a six-digit PIN through
-  `/accounts/api/login/`; authentication is a Django session.
+- Login is serial number plus a six-digit PIN through the versioned alias
+  `/api/v1/accounts/api/login/`; authentication is a Django session.
 - All mutating requests obtain a CSRF token and send credentials.
 - Normal feedback uses inline errors, retryable loading/error states, toasts,
   and confirmation modals rather than browser alerts.
@@ -114,10 +116,11 @@ re-checks authorization on the server.
 From the repository root:
 
 ```bash
-for f in frontend/assets/js/**/*.js; do node --check "$f"; done
+npm test
 ```
 
-The backend smoke suite is run from `backend/` with `python manage.py test`.
+The full backend + frontend suite runs from the repository root with
+`./run-tests.sh`.
 For a release, also exercise the application at 360px, 768px, 1024px, and
 1440px widths, plus 400/401/403/404/409/429/500 responses, timeout/network
 failure, malformed JSON, offline navigation, cache expiry, service-worker

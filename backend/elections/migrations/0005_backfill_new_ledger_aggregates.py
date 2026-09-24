@@ -30,6 +30,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('elections', '0004_handoverledger_auto_calculated_reform'),
+        ('executives', '0003_executive_elected_via'),
     ]
 
     operations = [

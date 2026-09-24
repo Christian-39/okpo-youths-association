@@ -18,7 +18,7 @@
  *   <div id="mobile-nav-slot"></div>
  *
  * Then calls OYA_SHELL.init({ page: "members", title: "Members" }).
- * This mirrors templates/base.html's {% include %}s + inline <script> blocks.
+ * This loads shared HTML fragments and wires the common dashboard shell.
  */
 (function () {
   "use strict";
@@ -26,6 +26,12 @@
   async function fetchComponent(name) {
     const res = await fetch(`components/${name}.html`);
     return res.text();
+  }
+
+  function escapeHtml(value) {
+    const node = document.createElement("span");
+    node.textContent = value == null ? "" : String(value);
+    return node.innerHTML;
   }
 
   function setActiveNav(page) {
@@ -226,6 +232,7 @@
     const resultsBox = document.getElementById("searchResults");
     if (!input || !resultsBox) return;
     const url = input.dataset.searchUrl;
+    const searchFetch = window.OYA_API.createCancellable();
     let debounceTimer;
 
     input.addEventListener("input", () => {
@@ -234,9 +241,10 @@
       if (q.length < 2) { resultsBox.classList.add("hidden"); return; }
       debounceTimer = setTimeout(async () => {
         try {
-          const data = await window.OYA_API.apiFetch(`${url}?q=${encodeURIComponent(q)}`);
+          const data = await searchFetch(`${url}?q=${encodeURIComponent(q)}`, { timeout: 10000 });
           renderSearchResults(data.results || []);
         } catch (err) {
+          if (err && err.kind === "abort") return;
           console.error("OYA: global search failed:", err);
           resultsBox.innerHTML = `<div class="dropdown-item" style="color:var(--oya-danger);">Search unavailable — try again</div>`;
           resultsBox.classList.remove("hidden");
@@ -265,8 +273,8 @@
             // frontend detail page yet — show as plain text rather than
             // a dead or misleading link.
             return page
-              ? `<a class="dropdown-item" href="${page}${r.id}">${r.name}</a>`
-              : `<div class="dropdown-item" style="opacity:0.7;">${r.name}</div>`;
+              ? `<a class="dropdown-item" href="${page}${encodeURIComponent(r.id)}">${escapeHtml(r.name)}</a>`
+              : `<div class="dropdown-item" style="opacity:0.7;">${escapeHtml(r.name)}</div>`;
           })
           .join("");
       }

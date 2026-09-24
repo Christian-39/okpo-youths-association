@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a3d62">
   <link rel="manifest" href="manifest.webmanifest">
-  <script>(function(){try{var t=localStorage.getItem("oya_theme");var d=(t==="dark"||t==="light")?t:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",d);}catch(e){}})();</script>
+  <script src="assets/js/early-theme.js"></script>
   <title>Add Clan | OYA</title>
   <link rel="icon" type="image/png" href="assets/images/oya_logo.png">
   <link rel="stylesheet" href="assets/css/base.css">
@@ -57,35 +57,6 @@
   <script src="assets/js/theme.js"></script>
   <script src="assets/js/shell.js"></script>
   <script src="assets/js/pwa.js"></script>
-  <script>
-    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
-    function showErrors(errors) {
-      const box = document.getElementById("formErrorsBox");
-      const lines = Array.isArray(errors) ? errors : [String(errors)];
-      box.innerHTML = lines.map((m) => `<div class="alert alert-danger" style="margin-bottom:0.5rem;">${esc(m)}</div>`).join("");
-      box.style.display = lines.length ? "" : "none";
-    }
-
-    document.getElementById("clanForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById("submitBtn");
-      btn.disabled = true;
-      showErrors([]);
-      const formData = new FormData(document.getElementById("clanForm"));
-      try {
-        await window.OYA_API.apiFetch("/members/api/clans/create/", { method: "POST", body: formData });
-        window.location.href = "clans.html";
-      } catch (err) {
-        if (err.status === 400 && err.data) showErrors(err.data.errors || err.data);
-        else showErrors([err.message || "Something went wrong."]);
-        btn.disabled = false;
-      }
-    });
-
-    (async function () {
-      const user = await window.OYA_SHELL.init({ page: "clans", title: "Add Clan", requireExecutive: true });
-      if (!user) return;
-    })();
-  </script>
+  <script src="assets/js/pages/clan-form.js"></script>
 </body>
 </html>

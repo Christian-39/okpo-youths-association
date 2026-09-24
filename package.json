@@ -1,0 +1,16 @@
+{
+  "name": "oya-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Okpo Youths Association — standalone frontend. No runtime dependencies by design: no bundler, no framework, no chart library. The scripts below use only Node's standard library.",
+  "scripts": {
+    "release": "node tools/release.mjs",
+    "release:check": "node tools/release.mjs --check",
+    "test": "node tests/frontend/run-all.mjs",
+    "test:all": "./run-tests.sh"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

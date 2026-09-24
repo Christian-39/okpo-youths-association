@@ -220,6 +220,10 @@
       });
     }
 
+    // Each load aborts the previous one, so a slow earlier response can never
+    // repaint the table over newer results (type "CH" then "CHR" quickly).
+    const listRequest = window.OYA_API.createCancellable();
+
     async function load() {
       const tbody = document.getElementById("membersTbody");
       const qs = new URLSearchParams();
@@ -228,8 +232,10 @@
       if (state.clan) qs.set("clan", state.clan);
       qs.set("page", state.page);
 
+      tbody.innerHTML = `<tr><td colspan="10"><div class="oya-loading"><span class="oya-spinner"></span>Loading members&hellip;</div></td></tr>`;
+
       try {
-        const data = await window.OYA_API.apiFetch(`/members/api/list/?${qs.toString()}`);
+        const data = await listRequest(`/members/api/list/?${qs.toString()}`);
         buildFiltersOnce(data);
 
         document.getElementById("statsSummary").innerHTML = `
@@ -245,7 +251,22 @@
         }
         renderPagination(data.pagination);
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--oya-danger);">Couldn't load members: ${esc(err.message)}</td></tr>`;
+        // A superseded request is the normal outcome of fast typing — leave
+        // the newer request to paint rather than flashing an error.
+        if (err && err.isCancellation) return;
+        tbody.innerHTML = `
+          <tr><td colspan="10">
+            <div class="oya-state oya-state--error">
+              <span class="oya-state__icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </span>
+              <span class="oya-state__title">Couldn't load members</span>
+              <span class="oya-state__message">${esc(err.message)}</span>
+              <span class="oya-state__actions"><button type="button" class="btn btn-secondary btn-sm" id="membersRetryBtn">Retry</button></span>
+            </div>
+          </td></tr>`;
+        const retry = document.getElementById("membersRetryBtn");
+        if (retry) retry.addEventListener("click", load);
       }
     }
 

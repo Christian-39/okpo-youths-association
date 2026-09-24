@@ -129,5 +129,11 @@
     return data;
   }
 
-  window.OYA_API = { apiFetch, ApiError, getCookie, clearCsrfCache };
+  window.OYA_API = {
+      apiFetch,
+      ApiError,
+      getCookie,
+      fetchCsrfToken,
+      clearCsrfCache
+  };
 })();

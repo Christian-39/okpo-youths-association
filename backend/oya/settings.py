@@ -193,10 +193,6 @@ CORS_ALLOW_ALL_ORIGINS = False
 
 # ── Cookie settings: explicit for both DEBUG and production ──
 if DEBUG:
-    # Local dev runs on HTTP.  SameSite=Lax is the safest default that
-    # still works across ports on the SAME hostname (localhost:5500 -> localhost:8000).
-    # IMPORTANT: do NOT mix "localhost" and "127.0.0.1" — pick one host
-    # for both frontend and backend or the cookie will be rejected.
     SESSION_COOKIE_SAMESITE = "Lax"
     CSRF_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = False

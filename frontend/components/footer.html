@@ -1,2 +1,14 @@
-<!-- Shared footer contract. shell.js injects the current application version. -->
-<footer class="app-footer" data-component="footer"></footer>
+<!--
+  OYA shared component: App footer.
+
+  Contract expected by assets/js/shell.js:
+    #footerYear — shell.js sets this to new Date().getFullYear()
+
+  Injected into <div id="footer-slot"></div> via slot.innerHTML = html.
+-->
+<footer class="app-footer" data-component="footer">
+  <div>
+    <span>&copy; <span id="footerYear">2026</span> OKPO Youths Association.</span>
+    <span style="color:var(--oya-accent);font-weight:600;"> PEACE &amp; PROGRESS</span>
+  </div>
+</footer>
